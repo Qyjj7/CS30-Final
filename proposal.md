@@ -5,6 +5,7 @@
 
 ## Needs To Have
 
+- a procedurally generated environment
 
 ## Nice To Have
 
