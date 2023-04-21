@@ -2,14 +2,20 @@
 
 ## Description
 
-- a roguelike dungeon crawler
+- a hack n' slash roguelike dungeon crawler
 
 ## Needs To Have
 
-- a procedurally generated environment
-- levels large enough to be explored that don't fit in one screen
+- a procedurally generated dungeon divided into rooms
+- levels large enough to be explored that don't fit entirely in screen
+- fluid, fast paced combat
+- progressively more difficult dungeon levels
+- sound effects
 
 ## Nice To Have
 
 - dynamic lighting
-- click any explored area and automatically pathfind shortest route there
+- enemy AI / pathfinding
+- satisying screenshake
+- decent looking graphics
+- music
