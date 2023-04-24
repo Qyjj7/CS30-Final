@@ -19,3 +19,4 @@
 - satisying screenshake
 - decent looking graphics
 - music
+- updated and more interesting generated room shapes
