@@ -29,12 +29,22 @@ class Room {
 
         for (let someCell of cells) {
           if (someCell.x === x && someCell.y === y) {
-            theseCells.push(someCell)
+            theseCells.push(someCell);
           }
         }
       }
     }
     return theseCells;
+  }
+
+  positionValid() {
+    // returns false if room spawn overlaps another room
+    // only works before this room is pushed to rooms array
+    for (let otherRoom of rooms) {
+      for (let someCell of this.includedCells()) {
+        return ! otherRoom.includedCells().includes(someCell);
+      }
+    }
   }
 }
 
@@ -101,6 +111,9 @@ function createRoom() {
   let y = someCell.y;
   
   let someRoom = new Room(x, y, width, height);
+  if (someRoom.positionValid()) {
+    console.log("hi");
+  }
   rooms.push(someRoom);
 }
 

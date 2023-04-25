@@ -8,15 +8,17 @@
 
 - a procedurally generated dungeon divided into rooms
 - levels large enough to be explored that don't fit entirely in screen
-- fluid, fast paced combat
+- real time combat
 - progressively more difficult dungeon levels
 - sound effects
+- music
+- basic enemy movement in a straight line
 
 ## Nice To Have
 
 - dynamic lighting
-- enemy AI / pathfinding
+- improved enemy AI / pathfinding
 - satisying screenshake
 - decent looking graphics
-- music
 - updated and more interesting generated room shapes
+- multiple unique weapons and enemies
