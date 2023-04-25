@@ -5,12 +5,12 @@
 
 class Room {
   constructor(x, y, w, h) {
-    this.width = w;
-    this.height = h;
+    this.width = w+1;
+    this.height = h+1;
     this.x = x;
     this.y = y;
     this.top = y;
-    this.bottom = y-h;
+    this.bottom = y+h;
     this.left = x;
     this.right = x+w;
   }
@@ -21,11 +21,17 @@ class Room {
   }
 
   includedCells() {
+    // returns the array of index values for all cells that makeup this room
     let theseCells = [];
-    // Doesn't yet work
-    for (let i = this.y; i <= this.bottom; i++) {
-      for (let j = this.x; j <= this.right; j++) {
-        theseCells[i].push(j); 
+
+    for (let y = this.y; y <= this.bottom; y++) {
+      for (let x = this.x; x <= this.right; x++) {
+
+        for (let someCell of cells) {
+          if (someCell.x === x && someCell.y === y) {
+            theseCells.push(someCell)
+          }
+        }
       }
     }
     return theseCells;
@@ -45,8 +51,8 @@ class Cell {
 }
 
 
-let rows = 30;
-let cols = 30; 
+let rows = 10;
+let cols = 10; 
 let cells = [];
 let rooms = [];
 let cellSize;
@@ -87,14 +93,15 @@ function createGrid() {
 
 
 function createRoom() {
-  let height = int(random(3, 7));
-  let width = int(random(3, 7));
+  let height = floor(random(0, 2));
+  let width = floor(random(0, 2));
+
   let someCell = random(cells);
   let x = someCell.x;
   let y = someCell.y;
+  
   let someRoom = new Room(x, y, width, height);
   rooms.push(someRoom);
-  console.log(someRoom.includedCells());
 }
 
 
