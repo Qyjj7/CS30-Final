@@ -37,14 +37,40 @@ class Room {
     return theseCells;
   }
 
+  adjustPosition(direction, magnitude) {
+    if (direction === "north") {
+      this.y -= magnitude;
+      this.top -= magnitude;
+      this.bottom -= magnitude;
+    }
+    if (direction === "south") {
+      this.y += magnitude;
+      this.top += magnitude;
+      this.bottom += magnitude;
+    }
+    if (direction === "east") {
+      this.x += magnitude;
+      this.left += magnitude;
+      this.right += magnitude;
+    }
+    if (direction === "west") {
+      this.x -= magnitude;
+      this.left -= magnitude;
+      this.right -= magnitude;
+    }
+  }
+
   positionValid() {
-    // returns false if room spawn overlaps another room
+    // returns false if room spawns overlapping another room
     // only works before this room is pushed to rooms array
     for (let otherRoom of rooms) {
       for (let someCell of this.includedCells()) {
-        return ! otherRoom.includedCells().includes(someCell);
+        if (otherRoom.includedCells().includes(someCell)) {
+          return false;
+        }
       }
     }
+    return true;
   }
 }
 
@@ -61,8 +87,11 @@ class Cell {
 }
 
 
-let rows = 10;
-let cols = 10; 
+const MAXROOMSIZE = 4;
+const MINROOMSIZE = 1;
+
+let rows = 20;
+let cols = 20; 
 let cells = [];
 let rooms = [];
 let cellSize;
@@ -103,18 +132,23 @@ function createGrid() {
 
 
 function createRoom() {
-  let height = floor(random(0, 2));
-  let width = floor(random(0, 2));
+  let height = floor(random(MINROOMSIZE, MAXROOMSIZE));
+  let width = floor(random(MINROOMSIZE, MAXROOMSIZE));
 
   let someCell = random(cells);
   let x = someCell.x;
   let y = someCell.y;
   
   let someRoom = new Room(x, y, width, height);
+  console.log(someRoom.positionValid());
+
   if (someRoom.positionValid()) {
-    console.log("hi");
+    rooms.push(someRoom);
   }
-  rooms.push(someRoom);
+  else {
+    createRoom();
+  }
+  
 }
 
 
