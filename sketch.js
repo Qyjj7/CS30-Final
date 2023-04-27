@@ -13,10 +13,11 @@ class Room {
     this.bottom = y+h;
     this.left = x;
     this.right = x+w;
+    this.color = color(random(255), random(255), random(255));
   }
 
   display() {
-    fill("black");
+    fill(this.color);
     rect(this.x*cellSize, this.y*cellSize, this.width*cellSize, this.height* cellSize);
   }
 
@@ -94,6 +95,7 @@ let rows = 20;
 let cols = 20; 
 let cells = [];
 let rooms = [];
+let directions = ["north", "south", "east", "west"];
 let cellSize;
 
 
@@ -132,26 +134,52 @@ function createGrid() {
 
 
 function createRoom() {
-  let height = floor(random(MINROOMSIZE, MAXROOMSIZE));
-  let width = floor(random(MINROOMSIZE, MAXROOMSIZE));
+  let h = floor(random(MINROOMSIZE, MAXROOMSIZE));
+  let w = floor(random(MINROOMSIZE, MAXROOMSIZE));
+  let x = floor(cols/2 - w/2);
+  let y = floor(rows/2 - h/2);
 
-  let someCell = random(cells);
-  let x = someCell.x;
-  let y = someCell.y;
+  if (rooms.length > 0) {
+    let spawningSide = random(directions);
+    let previousRoomCells = rooms[rooms.length-1].includedCells();
+    x = previousRoomCells[0].x;
+    y = previousRoomCells[0].y;
+
+    if (spawningSide === "north") {
+      y -= h+1;
+    }
+    if (spawningSide === "south") {
+      y += h+2;
+    }
+    if (spawningSide === "east") {
+      x += w+1;
+    }
+    if (spawningSide === "west") {
+      y -= w+2;
+    }
+  }
   
-  let someRoom = new Room(x, y, width, height);
+  let someRoom = new Room(x, y, w, h);
   console.log(someRoom.positionValid());
+  rooms.push(someRoom);
 
-  if (someRoom.positionValid()) {
+  /* if (someRoom.positionValid()) {
     rooms.push(someRoom);
   }
   else {
     createRoom();
-  }
+  } */
   
 }
 
 
 function mousePressed() {
   createRoom();
+}
+
+
+function keyPressed() {
+  for (let someRoom of rooms) {
+    someRoom.adjustPosition("north", 1);
+  }
 }
