@@ -42,16 +42,20 @@ class Room {
     let spawningSide = random(directions);
     
     if (spawningSide === "north") {
-      this.y -= (this.height+1);
+      this.y -= this.height+1;
+      this.x += floor(random(-2,2));
     }
     if (spawningSide === "south") {
-      this.y += (otherRoom.height+1);
+      this.y += otherRoom.height+1;
+      this.x += floor(random(-2,2));
     }
     if (spawningSide === "east") {
-      this.x += (otherRoom.width+1);
+      this.x += otherRoom.width+1;
+      this.y += floor(random(-2,2));
     }
     if (spawningSide === "west") {
-      this.x -= (this.width+1);
+      this.x -= this.width+1;
+      this.y += floor(random(-2,2));
     }
   }
 
@@ -87,8 +91,8 @@ class Cell {
 const MAXROOMSIZE = 5;
 const MINROOMSIZE = 2;
 
-let rows = 20;
-let cols = 20; 
+let rows = 24;
+let cols = 24; 
 let cells = [];
 let rooms = [];
 let directions = ["north", "south", "east", "west"];
@@ -96,6 +100,7 @@ let cellSize;
 
 
 function setup() {
+
   createCanvas(windowWidth, windowHeight);
 
   cellSize = height/rows;
@@ -105,12 +110,14 @@ function setup() {
 
 
 function draw() {
+
   background(220);
   display();
 }
 
 
 function display() {
+
   for (let someCell of cells) {
     someCell.display();
   }
@@ -121,6 +128,7 @@ function display() {
 
 
 function createFirstRoom() {
+
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x ++) {
       cells.push(new Cell(x, y));
@@ -138,20 +146,33 @@ function createFirstRoom() {
 
 
 function createRoom() {
-  let otherRoom = random(rooms);
-  let h = floor(random(MINROOMSIZE, MAXROOMSIZE));
-  let w = floor(random(MINROOMSIZE, MAXROOMSIZE));
-  let x = otherRoom.x;
-  let y = otherRoom.y;
 
-  let someRoom = new Room(x, y, w, h);
-  someRoom.adjustPosition(otherRoom);
+  let tempRooms = [...rooms];
 
-   if (someRoom.positionValid()) {
-    rooms.push(someRoom);
-  }
-  else {
-    createRoom();
+  while (tempRooms.length > 0) {
+
+    let otherRoom = random(tempRooms);
+    let h = floor(random(MINROOMSIZE, MAXROOMSIZE));
+    let w = floor(random(MINROOMSIZE, MAXROOMSIZE));
+    let x = otherRoom.x;
+    let y = otherRoom.y;
+
+    let someRoom = new Room(x, y, w, h);
+    someRoom.adjustPosition(otherRoom);
+
+    if (someRoom.positionValid()) {
+      rooms.push(someRoom);
+      tempRooms.push(someRoom);
+      break;
+        
+    }
+    else {
+      for (let i = 0; i < tempRooms.length; i++) {
+        if (tempRooms[i] === otherRoom) {
+          tempRooms.splice(i, 1);
+        }
+      }
+    }
   }
   
 }
@@ -163,5 +184,5 @@ function mousePressed() {
 
 
 function keyPressed() {
-  console.log(rooms[0].includedCells(1))
+  console.log(rooms[0].includedCells(1));
 }
