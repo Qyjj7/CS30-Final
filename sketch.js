@@ -15,12 +15,12 @@ class Room {
 
   display() {
     fill(this.color);
-    rect(this.x*cellSize, this.y*cellSize, this.width*cellSize, this.height* cellSize);
+    rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height* CELLSIZE);
   }
 
 
   includedCells(radius) {
-    // returns the array of index values for all cells that makeup this room
+
     let theseCells = [];
 
     for (let y = this.y-radius; y <= this.y+this.height+radius-1; y++) {
@@ -37,43 +37,63 @@ class Room {
   }
 
 
-  adjustPosition(otherRoom) {
-    let directionsTried = [];
+  createNeighbor(x, y, w, h) {
+
+    let newRoom = new Room(x, y, w, h);
+
     let spawningSide = random(directions);
     
     if (spawningSide === "north") {
-      this.y -= this.height+1;
-      this.x += floor(random(-2,2));
+      newRoom.y -= newRoom.height+1;
+      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
     }
     if (spawningSide === "south") {
-      this.y += otherRoom.height+1;
-      this.x += floor(random(-2,2));
+      newRoom.y += this.height+1;
+      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
     }
     if (spawningSide === "east") {
-      this.x += otherRoom.width+1;
-      this.y += floor(random(-2,2));
+      newRoom.x += this.width+1;
+      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
     }
     if (spawningSide === "west") {
-      this.x -= this.width+1;
-      this.y += floor(random(-2,2));
-    }
-  }
+      newRoom.x -= newRoom.width+1;
+      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
+    } 
+
+    return newRoom;
+}
 
 
   positionValid() {
-    // returns false if room spawns overlapping another room
-    // or room spawns outside of grid
-    // only works before this room is pushed to rooms array
+
+    let roomA = [];
+    for (let y = this.y-1; y < this.y+this.height; y++) {
+      for (let x = this.x-1; x < this.x+this.width; x++) {
+        roomA.push(new Cell(x, y));
+      }
+    }
+
     for (let otherRoom of rooms) {
-      for (let someCell of this.includedCells(0)) {
-        if (otherRoom.includedCells(1).includes(someCell)) {
-          return false;
+
+      let roomB = [];
+      for (let y = otherRoom.y-1; y < otherRoom.y+otherRoom.height; y++) {
+        for (let x = otherRoom.x-1; x < otherRoom.x+otherRoom.width; x++) {
+          roomB.push(new Cell(x, y));
+        }
+      }
+
+      for (let i = 0; i < roomA.length; i++) {
+        for (let j = 0; j < roomB.length; j++) {
+          if (roomA[i].x === roomB[j].x && roomA[i].y === roomB[j].y) {
+            return false;
+          }
         }
       }
     }
-    return this.includedCells(0).length === this.width*this.height;
+    return true;
   }
 }
+
 
 class Cell {
   constructor(x, y) {
@@ -83,29 +103,27 @@ class Cell {
 
   display() {
     fill("white");
-    rect(this.x*cellSize, this.y*cellSize, cellSize, cellSize);
+    rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
   }
 }
 
 
-const MAXROOMSIZE = 5;
+const MAXROOMSIZE = 6;
 const MINROOMSIZE = 2;
+const ROOMQUANTITY = 30;
+const CELLSIZE = 20;
 
-let rows = 24;
-let cols = 24; 
 let cells = [];
 let rooms = [];
 let directions = ["north", "south", "east", "west"];
-let cellSize;
 
 
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
 
-  cellSize = height/rows;
-
   createFirstRoom();
+  generateRooms();
 }
 
 
@@ -129,57 +147,45 @@ function display() {
 
 function createFirstRoom() {
 
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x ++) {
-      cells.push(new Cell(x, y));
-    }
-  }
-
   let h = MINROOMSIZE;
   let w = MINROOMSIZE;
-  let x = floor(cols/2 - w/2);
-  let y = floor(rows/2 - h/2);
+  let x = floor(width/CELLSIZE/2 - w/2);
+  let y = floor(height/CELLSIZE/2 - h/2);
 
   let someRoom = new Room(x, y, w, h);
   rooms.push(someRoom);
 }
 
 
-function createRoom() {
+function generateRooms() {
 
-  let tempRooms = [...rooms];
-
-  while (tempRooms.length > 0) {
-
-    let otherRoom = random(tempRooms);
+  while (rooms.length < ROOMQUANTITY) {
+    let validRooms = [...rooms];
     let h = floor(random(MINROOMSIZE, MAXROOMSIZE));
     let w = floor(random(MINROOMSIZE, MAXROOMSIZE));
-    let x = otherRoom.x;
-    let y = otherRoom.y;
-
-    let someRoom = new Room(x, y, w, h);
-    someRoom.adjustPosition(otherRoom);
-
-    if (someRoom.positionValid()) {
-      rooms.push(someRoom);
-      tempRooms.push(someRoom);
-      break;
-        
-    }
-    else {
-      for (let i = 0; i < tempRooms.length; i++) {
-        if (tempRooms[i] === otherRoom) {
-          tempRooms.splice(i, 1);
+  
+    while (validRooms.length > 0) {
+      let someRoom = random(validRooms);
+      let x = someRoom.x;
+      let y = someRoom.y;
+      let newRoom = someRoom.createNeighbor(x, y, w, h)
+  
+      if (! newRoom.positionValid()) {
+        for (let i = 0; i < validRooms.length; i++) {
+          validRooms.splice(i, 1);
         }
+      }
+      else {
+        rooms.push(newRoom);
+        break;
       }
     }
   }
-  
 }
 
 
 function mousePressed() {
-  createRoom();
+  generateRooms();
 }
 
 
