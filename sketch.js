@@ -79,16 +79,16 @@ class Room {
   spawnDoors() {
 
     for (let direction of directions) {
+      let options = [];
 
       if (direction === "north") {
         for (let i = this.x; i < this.x+this.width; i++) {
           for (let someCell of cells) {
-            if (someCell.x === i && someCell.y === this.y-2 && someCell.object !== "door") {
-              
+
+            if (someCell.x === i && someCell.y === this.y-2 && someCell.object === "blank") {
               let newCell = new Cell(i, this.y-1);
               newCell.object = "door";
-              newCell.color = "black"
-              cells.push(newCell);
+              options.push(newCell);
             }
           }
         }
@@ -96,12 +96,11 @@ class Room {
       if (direction === "south") {
         for (let i = this.x; i < this.x+this.width; i++) {
           for (let someCell of cells) {
-            if (someCell.x === i && someCell.y === this.y+this.height+1 && someCell.object !== "door") {
-              
+
+            if (someCell.x === i && someCell.y === this.y+this.height+1 && someCell.object === "blank") {              
               let newCell = new Cell(i, this.y+this.height);
               newCell.object = "door";
-              newCell.color = "black"
-              cells.push(newCell);
+              options.push(newCell);
             }
           }
         }
@@ -110,11 +109,10 @@ class Room {
         for (let i = this.y; i < this.y+this.height; i++) {
           for (let someCell of cells) {
     
-            if (someCell.y === i && someCell.x === this.x+this.width+1 && someCell.object !== "door") {
+            if (someCell.y === i && someCell.x === this.x+this.width+1 && someCell.object === "blank") {
               let newCell = new Cell(this.x+this.width, i);
               newCell.object = "door";
-              newCell.color = "black"
-              cells.push(newCell);
+              options.push(newCell);
             }
           }
         }
@@ -122,15 +120,18 @@ class Room {
       if (direction === "west") {
         for (let i = this.y; i < this.y+this.height; i++) {
           for (let someCell of cells) {
-            if (someCell.y === i && someCell.x === this.x-2 && someCell.object !== "door") {
-              
+
+            if (someCell.y === i && someCell.x === this.x-2 && someCell.object === "blank") {             
               let newCell = new Cell(this.x-1, i);
               newCell.object = "door";
-              newCell.color = "black"
-              cells.push(newCell);
+              options.push(newCell);
             }
           }
         }
+      }
+      if (options.length > 0) {
+        let newCell = random(options);
+        cells.push(newCell);
       }
     }
   }
@@ -162,6 +163,12 @@ class Cell {
     fill(this.color);
     rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
   }
+
+  determineColor() {
+    if (this.object === "door") {
+      this.color = "black";
+    }
+  }
 }
 
 
@@ -172,7 +179,6 @@ const CELLSIZE = 20;
 
 let cells = [];
 let rooms = [];
-let doors = [];
 let directions = ["north", "south", "east", "west"];
 
 
@@ -196,6 +202,7 @@ function draw() {
 function display() {
 
   for (let someCell of cells) {
+    someCell.determineColor();
     someCell.display();
   }
   //for (let someRoom of rooms) {
