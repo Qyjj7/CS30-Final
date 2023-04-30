@@ -10,30 +10,13 @@ class Room {
     this.x = x;
     this.y = y;
     this.color = color(random(255), random(255), random(255));
+    this.cells = [];
   }
 
 
   display() {
     fill(this.color);
     rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height* CELLSIZE);
-  }
-
-
-  includedCells(radius) {
-
-    let theseCells = [];
-
-    for (let y = this.y-radius; y <= this.y+this.height+radius-1; y++) {
-      for (let x = this.x-radius; x <= this.x+this.width+radius-1; x++) {
-
-        for (let someCell of cells) {
-          if (someCell.x === x && someCell.y === y) {
-            theseCells.push(someCell);
-          }
-        }
-      }
-    }
-    return theseCells;
   }
 
 
@@ -59,7 +42,6 @@ class Room {
       newRoom.x -= newRoom.width+1;
       newRoom.y += floor(random(-newRoom.height+1, this.height-1));
     } 
-
     return newRoom;
 }
 
@@ -92,6 +74,79 @@ class Room {
     }
     return true;
   }
+
+
+  spawnDoors() {
+
+    for (let direction of directions) {
+
+      if (direction === "north") {
+        for (let i = this.x; i < this.x+this.width; i++) {
+          for (let someCell of cells) {
+            if (someCell.x === i && someCell.y === this.y-2 && someCell.object !== "door") {
+              
+              let newCell = new Cell(i, this.y-1);
+              newCell.object = "door";
+              newCell.color = "black"
+              cells.push(newCell);
+            }
+          }
+        }
+      }
+      if (direction === "south") {
+        for (let i = this.x; i < this.x+this.width; i++) {
+          for (let someCell of cells) {
+            if (someCell.x === i && someCell.y === this.y+this.height+1 && someCell.object !== "door") {
+              
+              let newCell = new Cell(i, this.y+this.height);
+              newCell.object = "door";
+              newCell.color = "black"
+              cells.push(newCell);
+            }
+          }
+        }
+      }
+      if (direction === "east") {
+        for (let i = this.y; i < this.y+this.height; i++) {
+          for (let someCell of cells) {
+    
+            if (someCell.y === i && someCell.x === this.x+this.width+1 && someCell.object !== "door") {
+              let newCell = new Cell(this.x+this.width, i);
+              newCell.object = "door";
+              newCell.color = "black"
+              cells.push(newCell);
+            }
+          }
+        }
+      }
+      if (direction === "west") {
+        for (let i = this.y; i < this.y+this.height; i++) {
+          for (let someCell of cells) {
+            if (someCell.y === i && someCell.x === this.x-2 && someCell.object !== "door") {
+              
+              let newCell = new Cell(this.x-1, i);
+              newCell.object = "door";
+              newCell.color = "black"
+              cells.push(newCell);
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+  addCells() {
+
+    for (let y = this.y; y < this.y+this.height; y++) {
+      for (let x = this.x; x < this.x+this.width; x++) {
+        let newCell = new Cell(x, y);
+        this.cells.push(newCell);
+        cells.push(newCell);
+      }
+    }
+  }
+
 }
 
 
@@ -99,10 +154,12 @@ class Cell {
   constructor(x, y) {
     this.x = x;
     this.y = y;
+    this.object = "blank";
+    this.color = "white";
   }
 
   display() {
-    fill("white");
+    fill(this.color);
     rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
   }
 }
@@ -115,6 +172,7 @@ const CELLSIZE = 20;
 
 let cells = [];
 let rooms = [];
+let doors = [];
 let directions = ["north", "south", "east", "west"];
 
 
@@ -124,6 +182,7 @@ function setup() {
 
   createFirstRoom();
   generateRooms();
+  generateDoors();
 }
 
 
@@ -139,9 +198,9 @@ function display() {
   for (let someCell of cells) {
     someCell.display();
   }
-  for (let someRoom of rooms) {
-    someRoom.display();
-  }
+  //for (let someRoom of rooms) {
+    //someRoom.display();
+  //}
 }
 
 
@@ -154,6 +213,7 @@ function createFirstRoom() {
 
   let someRoom = new Room(x, y, w, h);
   rooms.push(someRoom);
+  someRoom.addCells();
 }
 
 
@@ -177,9 +237,18 @@ function generateRooms() {
       }
       else {
         rooms.push(newRoom);
+        newRoom.addCells()
         break;
       }
     }
+  }
+}
+
+
+function generateDoors() {
+
+  for (let someRoom of rooms) {
+    someRoom.spawnDoors();
   }
 }
 
@@ -190,5 +259,5 @@ function mousePressed() {
 
 
 function keyPressed() {
-  console.log(rooms[0].includedCells(1));
+  
 }
