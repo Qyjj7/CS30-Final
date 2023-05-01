@@ -43,7 +43,7 @@ class Room {
       newRoom.y += floor(random(-newRoom.height+1, this.height-1));
     } 
     return newRoom;
-}
+  }
 
 
   positionValid() {
@@ -164,10 +164,46 @@ class Cell {
     rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
   }
 
+
   determineColor() {
     if (this.object === "door") {
       this.color = "black";
     }
+  }
+
+
+  adjacentCells() {
+
+    let theseCells = [];
+    for (let someCell of cells) {
+      if (someCell.x === this.x && someCell.y === this.y-1) { //north
+        theseCells.push(someCell);
+      }
+      if (someCell.x === this.x && someCell.y === this.y+1) { //south
+        theseCells.push(someCell);
+      }
+      if (someCell.x === this.x+1 && someCell.y === this.y) { //east
+        theseCells.push(someCell);
+      }
+      if (someCell.x === this.x-1 && someCell.y === this.y) { //west
+        theseCells.push(someCell);
+      }
+    }
+    return theseCells;
+  }
+}
+
+
+class Player {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.hp = 10;
+  }
+
+  display() {
+    fill("red");
+    circle(0, 0, CELLSIZE);
   }
 }
 
@@ -180,6 +216,7 @@ const CELLSIZE = 20;
 let cells = [];
 let rooms = [];
 let directions = ["north", "south", "east", "west"];
+let player;
 
 
 function setup() {
@@ -189,12 +226,15 @@ function setup() {
   createFirstRoom();
   generateRooms();
   generateDoors();
+
+  player = new Player(35, 20);
 }
 
 
 function draw() {
 
   background(220);
+  
   display();
 }
 
@@ -205,9 +245,8 @@ function display() {
     someCell.determineColor();
     someCell.display();
   }
-  //for (let someRoom of rooms) {
-    //someRoom.display();
-  //}
+  player.display();
+  
 }
 
 
@@ -235,7 +274,7 @@ function generateRooms() {
       let someRoom = random(validRooms);
       let x = someRoom.x;
       let y = someRoom.y;
-      let newRoom = someRoom.createNeighbor(x, y, w, h)
+      let newRoom = someRoom.createNeighbor(x, y, w, h);
   
       if (! newRoom.positionValid()) {
         for (let i = 0; i < validRooms.length; i++) {
@@ -244,7 +283,7 @@ function generateRooms() {
       }
       else {
         rooms.push(newRoom);
-        newRoom.addCells()
+        newRoom.addCells();
         break;
       }
     }
@@ -257,11 +296,19 @@ function generateDoors() {
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
   }
+  for (let i = cells.length-1; i > 0; i--) {
+    let adjacentCells = cells[i].adjacentCells();
+    for (let someCell of adjacentCells) {
+      if (someCell.object === "door" && cells[i].object === "door") {
+        cells.splice(i, 1);
+      }
+    }
+  }
 }
 
 
 function mousePressed() {
-  generateRooms();
+  
 }
 
 
