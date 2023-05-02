@@ -161,7 +161,7 @@ class Cell {
 
   display() {
     fill(this.color);
-    rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
+    rect((this.x-startX)*CELLSIZE, (this.y-startY)*CELLSIZE, CELLSIZE, CELLSIZE);
   }
 
 
@@ -203,7 +203,7 @@ class Player {
 
   display() {
     fill("red");
-    circle(0, 0, CELLSIZE);
+    square((startX-this.x)*CELLSIZE, (startY-this.y)*CELLSIZE, CELLSIZE);
   }
 }
 
@@ -217,6 +217,8 @@ let cells = [];
 let rooms = [];
 let directions = ["north", "south", "east", "west"];
 let player;
+let startX;
+let startY;
 
 
 function setup() {
@@ -226,15 +228,13 @@ function setup() {
   createFirstRoom();
   generateRooms();
   generateDoors();
-
-  player = new Player(35, 20);
 }
 
 
 function draw() {
 
   background(220);
-  
+  translate(player.x*CELLSIZE, player.y*CELLSIZE);
   display();
 }
 
@@ -256,6 +256,10 @@ function createFirstRoom() {
   let w = MINROOMSIZE;
   let x = floor(width/CELLSIZE/2 - w/2);
   let y = floor(height/CELLSIZE/2 - h/2);
+
+  startX = x;
+  startY = y;
+  player = new Player(x, y);
 
   let someRoom = new Room(x, y, w, h);
   rooms.push(someRoom);
@@ -313,5 +317,28 @@ function mousePressed() {
 
 
 function keyPressed() {
+
+  for (let someCell of cells) {
+    if (someCell.x === player.x && someCell.y === player.y) {
+      let current = someCell.adjacentCells();
+    }
+  }
+
+  if (key === "w") {
+    for (let someCell of cells) {
+      if (someCell.y === player.y+1) {
+        player.y ++;
+      }
+    }
   
+  }
+  if (key === "s") {
+    player.y --;
+  }
+  if (key === "a") {
+    player.x ++;
+  }
+  if (key === "d") {
+    player.x --;
+  }
 }
