@@ -199,19 +199,30 @@ class Player {
     this.x = x;
     this.y = y;
     this.hp = 10;
+    this.speed = 0.16;
   }
 
   display() {
     fill("red");
     square((startX-this.x)*CELLSIZE, (startY-this.y)*CELLSIZE, CELLSIZE);
   }
+
+  currentCell() {
+    let x = floor(this.x);
+    let y = floor(this.y);
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i].x === x && cells[i].y === y) {
+        return i;
+      }
+    }
+  }
 }
 
 
-const MAXROOMSIZE = 6;
-const MINROOMSIZE = 2;
-const ROOMQUANTITY = 30;
-const CELLSIZE = 20;
+const MAXROOMSIZE = 12;
+const MINROOMSIZE = 3;
+const ROOMQUANTITY = 20;
+const CELLSIZE = 50;
 
 let cells = [];
 let rooms = [];
@@ -234,6 +245,10 @@ function setup() {
 function draw() {
 
   background(220);
+
+  if (keyIsPressed) {
+    updateMovement();
+  }
   translate(player.x*CELLSIZE, player.y*CELLSIZE);
   display();
 }
@@ -316,29 +331,19 @@ function mousePressed() {
 }
 
 
-function keyPressed() {
+function updateMovement() {
 
-  for (let someCell of cells) {
-    if (someCell.x === player.x && someCell.y === player.y) {
-      let current = someCell.adjacentCells();
-    }
+  if (keyIsDown(87)) { //w
+    player.y += player.speed;
   }
-
-  if (key === "w") {
-    for (let someCell of cells) {
-      if (someCell.y === player.y+1) {
-        player.y ++;
-      }
-    }
-  
+  if (keyIsDown(83)) { //s
+    player.y -= player.speed;
   }
-  if (key === "s") {
-    player.y --;
+  if (keyIsDown(65)) { //d
+    player.x += player.speed;
   }
-  if (key === "a") {
-    player.x ++;
+  if (keyIsDown(68)) { //a
+    player.x -= player.speed;
   }
-  if (key === "d") {
-    player.x --;
-  }
+  console.log(player.currentCell());
 }
