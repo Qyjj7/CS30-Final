@@ -27,20 +27,20 @@ class Room {
     let spawningSide = random(directions);
     
     if (spawningSide === "north") {
-      newRoom.y -= newRoom.height+1;
-      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
+      newRoom.y -= newRoom.height;
+      newRoom.x += floor(random(-newRoom.width, this.width));
     }
     if (spawningSide === "south") {
-      newRoom.y += this.height+1;
-      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
+      newRoom.y += this.heigh+1;
+      newRoom.x += floor(random(-newRoom.width, this.width));
     }
     if (spawningSide === "east") {
-      newRoom.x += this.width+1;
-      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
+      newRoom.x += this.width;
+      newRoom.y += floor(random(-newRoom.height, this.height));
     }
     if (spawningSide === "west") {
-      newRoom.x -= newRoom.width+1;
-      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
+      newRoom.x -= newRoom.width;
+      newRoom.y += floor(random(-newRoom.height, this.height));
     } 
     return newRoom;
   }
@@ -49,8 +49,8 @@ class Room {
   positionValid() {
 
     let roomA = [];
-    for (let y = this.y-1; y < this.y+this.height; y++) {
-      for (let x = this.x-1; x < this.x+this.width; x++) {
+    for (let y = this.y; y < this.y+this.height; y++) {
+      for (let x = this.x; x < this.x+this.width; x++) {
         roomA.push(new Cell(x, y));
       }
     }
@@ -58,8 +58,8 @@ class Room {
     for (let otherRoom of rooms) {
 
       let roomB = [];
-      for (let y = otherRoom.y-1; y < otherRoom.y+otherRoom.height; y++) {
-        for (let x = otherRoom.x-1; x < otherRoom.x+otherRoom.width; x++) {
+      for (let y = otherRoom.y; y < otherRoom.y+otherRoom.height; y++) {
+        for (let x = otherRoom.x; x < otherRoom.x+otherRoom.width; x++) {
           roomB.push(new Cell(x, y));
         }
       }
@@ -76,12 +76,12 @@ class Room {
   }
 
 
-  spawnDoors() {
+  spawnDoors(otherRoom) {
 
     for (let direction of directions) {
       let options = [];
 
-      if (direction === "north") {
+      /* if (direction === "north") {
         for (let i = this.x; i < this.x+this.width; i++) {
           for (let someCell of cells) {
 
@@ -133,7 +133,7 @@ class Room {
         let newCell = random(options);
         cells.push(newCell);
         doors.push(newCell);
-      }
+      } */
     }
   }
 
@@ -171,7 +171,8 @@ class Cell {
   }
 
 
-  determineColor() {
+  determineColor(color) {
+    this.color = color;
     if (this.object === "door") {
       this.color = "black";
     }
@@ -211,16 +212,6 @@ class Player {
   display() {
     fill("red");
     square((startX-this.x)*CELLSIZE, (startY-this.y)*CELLSIZE, CELLSIZE);
-  }
-
-  currentCell() {
-    let x = floor(this.x);
-    let y = floor(this.y);
-    for (let i = 0; i < cells.length; i++) {
-      if (cells[i].x === x && cells[i].y === y) {
-        return i;
-      }
-    }
   }
 }
 
@@ -264,21 +255,19 @@ function draw() {
 
 function display() {
 
-  for (let someCell of cells) {
-    someCell.determineColor();
-    someCell.display();
+  for (let someDoor of doors) {
+    someDoor.determineColor();
+    someDoor.display();
   }
-/*   for (let someRoom of rooms) {
-    console.log(someRoom.cells);
-    console.log("new room");
-    for (let x = 0; x < someRoom.cells.length; x++) {
-      for (let y = 0; y < someRoom.cells.length; y++) {
-        let someCell = someRoom.cells[x][y]
-        someCell.determineColor();
+  for (let someRoom of rooms) {
+    for (let x = 0; x < someRoom.width; x++) {
+      for (let y = 0; y < someRoom.height; y++) {
+        let someCell = someRoom.cells[x][y];
+        someCell.determineColor(someRoom.color);
         someCell.display();
       }
     }
-  } */
+  }
   player.display();
   
 }
@@ -334,19 +323,24 @@ function generateDoors() {
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
   }
-  for (let i = cells.length-1; i > 0; i--) {
-    let adjacentCells = cells[i].adjacentCells();
+/*   for (let i = doors.length-1; i > 0; i--) {
+    let adjacentCells = doors[i].adjacentCells();
     for (let someCell of adjacentCells) {
-      if (someCell.object === "door" && cells[i].object === "door") {
-        cells.splice(i, 1);
+      if (someCell.object === "door") {
+        doors.splice(i, 1);
       }
     }
-  }
+  } */
 }
 
 
 function mousePressed() {
-  
+  let someRoom = rooms[0];
+  for (let x = 0; x < someRoom.cells.length; x++) {
+    for (let y = 0; y < someRoom.cells.length; y++) {
+      console.log(someRoom.cells[x][y]);
+    }
+  }
 }
 
 
@@ -364,5 +358,4 @@ function updateMovement() {
   if (keyIsDown(68)) { //a
     player.x -= player.speed;
   }
-  console.log(player.currentCell());
 }
