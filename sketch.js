@@ -28,19 +28,19 @@ class Room {
     
     if (spawningSide === "north") {
       newRoom.y -= newRoom.height;
-      newRoom.x += floor(random(-newRoom.width, this.width));
+      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
     }
     if (spawningSide === "south") {
-      newRoom.y += this.heigh+1;
-      newRoom.x += floor(random(-newRoom.width, this.width));
+      newRoom.y += this.height;
+      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
     }
     if (spawningSide === "east") {
       newRoom.x += this.width;
-      newRoom.y += floor(random(-newRoom.height, this.height));
+      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
     }
     if (spawningSide === "west") {
       newRoom.x -= newRoom.width;
-      newRoom.y += floor(random(-newRoom.height, this.height));
+      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
     } 
     return newRoom;
   }
@@ -76,65 +76,34 @@ class Room {
   }
 
 
-  spawnDoors(otherRoom) {
+  spawnDoors(direction, otherRoom) {
 
-    for (let direction of directions) {
-      let options = [];
+    let options = [];
+    let combinedCells = [];
 
-      /* if (direction === "north") {
-        for (let i = this.x; i < this.x+this.width; i++) {
-          for (let someCell of cells) {
-
-            if (someCell.x === i && someCell.y === this.y-2 && someCell.object === "blank") {
-              let newCell = new Cell(i, this.y-1);
-              newCell.object = "door";
-              options.push(newCell);
-            }
-          }
-        }
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        combinedCells.push(this.cells[x][y]);
       }
-      if (direction === "south") {
-        for (let i = this.x; i < this.x+this.width; i++) {
-          for (let someCell of cells) {
-
-            if (someCell.x === i && someCell.y === this.y+this.height+1 && someCell.object === "blank") {              
-              let newCell = new Cell(i, this.y+this.height);
-              newCell.object = "door";
-              options.push(newCell);
-            }
-          }
-        }
-      }
-      if (direction === "east") {
-        for (let i = this.y; i < this.y+this.height; i++) {
-          for (let someCell of cells) {
-    
-            if (someCell.y === i && someCell.x === this.x+this.width+1 && someCell.object === "blank") {
-              let newCell = new Cell(this.x+this.width, i);
-              newCell.object = "door";
-              options.push(newCell);
-            }
-          }
-        }
-      }
-      if (direction === "west") {
-        for (let i = this.y; i < this.y+this.height; i++) {
-          for (let someCell of cells) {
-
-            if (someCell.y === i && someCell.x === this.x-2 && someCell.object === "blank") {             
-              let newCell = new Cell(this.x-1, i);
-              newCell.object = "door";
-              options.push(newCell);
-            }
-          }
-        }
-      }
-      if (options.length > 0) {
-        let newCell = random(options);
-        cells.push(newCell);
-        doors.push(newCell);
-      } */
     }
+    for (let x = 0; x < otherRoom.width; x++) {
+      for (let y = 0; y < otherRoom.height; y++) {
+        combinedCells.push(otherRoom.cells[x][y]);
+      }
+    }
+
+    if (direction === "north") {
+      for (let thisCell of combinedCells) {
+        for (let otherCell of combinedCells) {
+          if (thisCell.x === otherCell.x && thisCell.y === otherCell.y-1) {
+            console.log(thisCell, otherCell);
+          }
+        }
+      }
+    }
+
+
+    
   }
 
 
@@ -321,16 +290,14 @@ function generateRooms() {
 function generateDoors() {
 
   for (let someRoom of rooms) {
-    someRoom.spawnDoors();
-  }
-/*   for (let i = doors.length-1; i > 0; i--) {
-    let adjacentCells = doors[i].adjacentCells();
-    for (let someCell of adjacentCells) {
-      if (someCell.object === "door") {
-        doors.splice(i, 1);
+    for (let direction of directions) {
+      for (let otherRoom of rooms) {
+        if (someRoom !== otherRoom) {
+          someRoom.spawnDoors(direction, otherRoom);
+        }
       }
     }
-  } */
+  }
 }
 
 
