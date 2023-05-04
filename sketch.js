@@ -132,6 +132,7 @@ class Room {
       if (options.length > 0) {
         let newCell = random(options);
         cells.push(newCell);
+        doors.push(newCell);
       }
     }
   }
@@ -139,11 +140,16 @@ class Room {
 
   addCells() {
 
-    for (let y = this.y; y < this.y+this.height; y++) {
-      for (let x = this.x; x < this.x+this.width; x++) {
-        let newCell = new Cell(x, y);
-        this.cells.push(newCell);
+    for (let x = 0; x < this.width; x++) {
+      this.cells.push([]);
+      for (let y = 0; y < this.height; y++) {
+        
+        let xPos = x + this.x;
+        let yPos = y + this.y;
+        let newCell = new Cell(xPos, yPos);
+
         cells.push(newCell);
+        this.cells[x].push(newCell);
       }
     }
   }
@@ -226,6 +232,7 @@ const CELLSIZE = 50;
 
 let cells = [];
 let rooms = [];
+let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
 let startX;
@@ -249,6 +256,7 @@ function draw() {
   if (keyIsPressed) {
     updateMovement();
   }
+
   translate(player.x*CELLSIZE, player.y*CELLSIZE);
   display();
 }
@@ -260,6 +268,17 @@ function display() {
     someCell.determineColor();
     someCell.display();
   }
+/*   for (let someRoom of rooms) {
+    console.log(someRoom.cells);
+    console.log("new room");
+    for (let x = 0; x < someRoom.cells.length; x++) {
+      for (let y = 0; y < someRoom.cells.length; y++) {
+        let someCell = someRoom.cells[x][y]
+        someCell.determineColor();
+        someCell.display();
+      }
+    }
+  } */
   player.display();
   
 }
