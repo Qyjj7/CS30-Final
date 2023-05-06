@@ -11,6 +11,7 @@ class Room {
     this.y = y;
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
+    this.doors = [];
   }
 
 
@@ -48,25 +49,18 @@ class Room {
 
   positionValid() {
 
-    let roomA = [];
-    for (let y = this.y; y < this.y+this.height; y++) {
-      for (let x = this.x; x < this.x+this.width; x++) {
-        roomA.push(new Cell(x, y));
+    let thisRoom = [];
+    for (let x = this.x; x < this.x+this.width; x++) {
+      for (let y = this.y; y < this.y+this.height; y++) {
+        thisRoom.push(new Cell(x, y));
       }
     }
 
     for (let otherRoom of rooms) {
 
-      let roomB = [];
-      for (let y = otherRoom.y; y < otherRoom.y+otherRoom.height; y++) {
-        for (let x = otherRoom.x; x < otherRoom.x+otherRoom.width; x++) {
-          roomB.push(new Cell(x, y));
-        }
-      }
-
-      for (let i = 0; i < roomA.length; i++) {
-        for (let j = 0; j < roomB.length; j++) {
-          if (roomA[i].x === roomB[j].x && roomA[i].y === roomB[j].y) {
+      for (let i = 0; i < thisRoom.length; i++) {
+        for (let otherCell of otherRoom.cells) {
+          if (thisRoom[i].x === otherCell.x && thisRoom[i].y === otherCell.y) {
             return false;
           }
         }
@@ -76,41 +70,42 @@ class Room {
   }
 
 
-  spawnDoors(direction, otherRoom) {
+  spawnDoors() {
 
-    let options = [];
-    let combinedCells = [];
+    let xMod;
+    let yMod;
 
-    for (let x = 0; x < this.width; x++) {
-      for (let y = 0; y < this.height; y++) {
-        combinedCells.push(this.cells[x][y]);
+    for (let direction of directions) {
+      if (direction === "north" || direction === "south") {
+        yMod = 1;
+        xMod = 0;
       }
-    }
-    for (let x = 0; x < otherRoom.width; x++) {
-      for (let y = 0; y < otherRoom.height; y++) {
-        combinedCells.push(otherRoom.cells[x][y]);
+      if (direction === "east" || direction === "west") {
+        yMod = 0;
+        xMod = 1;
       }
-    }
 
-    if (direction === "north") {
-      for (let thisCell of combinedCells) {
-        for (let otherCell of combinedCells) {
-          if (thisCell.x === otherCell.x && thisCell.y === otherCell.y-1) {
-            console.log(thisCell, otherCell);
+      for (let otherRoom of rooms) {
+        if (otherRoom !== this) {
+  
+          for (let someCell of this.cells) {
+            for (let otherCell of otherRoom.cells) {
+
+              if (someCell.x === otherCell.x - xMod && someCell.y === otherCell.y - yMod) {
+                someCell.object = "door";
+                otherCell.object = "door";
+              }
+            }
           }
         }
       }
     }
-
-
-    
   }
 
 
   addCells() {
 
     for (let x = 0; x < this.width; x++) {
-      this.cells.push([]);
       for (let y = 0; y < this.height; y++) {
         
         let xPos = x + this.x;
@@ -118,7 +113,7 @@ class Room {
         let newCell = new Cell(xPos, yPos);
 
         cells.push(newCell);
-        this.cells[x].push(newCell);
+        this.cells.push(newCell);
       }
     }
   }
@@ -136,7 +131,7 @@ class Cell {
 
   display() {
     fill(this.color);
-    rect((this.x-startX)*CELLSIZE, (this.y-startY)*CELLSIZE, CELLSIZE, CELLSIZE);
+    rect(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, CELLSIZE, CELLSIZE);
   }
 
 
@@ -151,7 +146,7 @@ class Cell {
   adjacentCells() {
 
     let theseCells = [];
-    for (let someCell of cells) {
+    for (let someCell of this.cells) {
       if (someCell.x === this.x && someCell.y === this.y-1) { //north
         theseCells.push(someCell);
       }
@@ -175,20 +170,21 @@ class Player {
     this.x = x;
     this.y = y;
     this.hp = 10;
-    this.speed = 0.16;
+    this.speed = CELLSIZE/600;
+    this.size = CELLSIZE/2;
   }
 
   display() {
     fill("red");
-    square((startX-this.x)*CELLSIZE, (startY-this.y)*CELLSIZE, CELLSIZE);
+    circle(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, this.size);
   }
 }
 
 
-const MAXROOMSIZE = 12;
-const MINROOMSIZE = 3;
+const MAXROOMSIZE = 15;
+const MINROOMSIZE = 5;
 const ROOMQUANTITY = 20;
-const CELLSIZE = 50;
+const CELLSIZE = 60;
 
 let cells = [];
 let rooms = [];
@@ -217,24 +213,17 @@ function draw() {
     updateMovement();
   }
 
-  translate(player.x*CELLSIZE, player.y*CELLSIZE);
+  translate(-player.x*CELLSIZE, -player.y*CELLSIZE);
   display();
 }
 
 
 function display() {
 
-  for (let someDoor of doors) {
-    someDoor.determineColor();
-    someDoor.display();
-  }
   for (let someRoom of rooms) {
-    for (let x = 0; x < someRoom.width; x++) {
-      for (let y = 0; y < someRoom.height; y++) {
-        let someCell = someRoom.cells[x][y];
+    for (let someCell of someRoom.cells) {
         someCell.determineColor(someRoom.color);
         someCell.display();
-      }
     }
   }
   player.display();
@@ -251,9 +240,9 @@ function createFirstRoom() {
 
   startX = x;
   startY = y;
-  player = new Player(x, y);
+  player = new Player(floor(h/2) + 0.5, floor(w/2) + 0.5);
 
-  let someRoom = new Room(x, y, w, h);
+  let someRoom = new Room(0, 0, w, h);
   rooms.push(someRoom);
   someRoom.addCells();
 }
@@ -290,39 +279,28 @@ function generateRooms() {
 function generateDoors() {
 
   for (let someRoom of rooms) {
-    for (let direction of directions) {
-      for (let otherRoom of rooms) {
-        if (someRoom !== otherRoom) {
-          someRoom.spawnDoors(direction, otherRoom);
-        }
-      }
-    }
+    someRoom.spawnDoors();
   }
+  
 }
 
 
 function mousePressed() {
-  let someRoom = rooms[0];
-  for (let x = 0; x < someRoom.cells.length; x++) {
-    for (let y = 0; y < someRoom.cells.length; y++) {
-      console.log(someRoom.cells[x][y]);
-    }
-  }
 }
 
 
 function updateMovement() {
 
   if (keyIsDown(87)) { //w
-    player.y += player.speed;
-  }
-  if (keyIsDown(83)) { //s
     player.y -= player.speed;
   }
+  if (keyIsDown(83)) { //s
+    player.y += player.speed;
+  }
   if (keyIsDown(65)) { //d
-    player.x += player.speed;
+    player.x -= player.speed;
   }
   if (keyIsDown(68)) { //a
-    player.x -= player.speed;
+    player.x += player.speed;
   }
 }
