@@ -72,31 +72,31 @@ class Room {
 
   spawnDoors() {
 
-    let xMod;
-    let yMod;
+    for (let otherRoom of rooms) {
+      if (otherRoom !== this) {
+        let options = [];
 
-    for (let direction of directions) {
-      if (direction === "north" || direction === "south") {
-        yMod = 1;
-        xMod = 0;
-      }
-      if (direction === "east" || direction === "west") {
-        yMod = 0;
-        xMod = 1;
-      }
+        for (let someCell of this.cells) {
+          for (let otherCell of otherRoom.cells) {
 
-      for (let otherRoom of rooms) {
-        if (otherRoom !== this) {
-  
-          for (let someCell of this.cells) {
-            for (let otherCell of otherRoom.cells) {
-
-              if (someCell.x === otherCell.x - xMod && someCell.y === otherCell.y - yMod) {
-                someCell.object = "door";
-                otherCell.object = "door";
-              }
+            if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
+              options.push([someCell, otherCell]);
+              //someCell.object = "door";
+              //otherCell.object = "door";
+            }
+            if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
+              options.push([someCell, otherCell]);
+              //someCell.object = "door";
+              //otherCell.object = "door";
             }
           }
+        }
+
+        if (options.length > 0) {
+          let chosenDoor = random(options);
+          chosenDoor[0].object = "door";
+          chosenDoor[1].object = "door";
+
         }
       }
     }
@@ -170,20 +170,32 @@ class Player {
     this.x = x;
     this.y = y;
     this.hp = 10;
-    this.speed = CELLSIZE/600;
+    this.speed = CELLSIZE/550;
     this.size = CELLSIZE/2;
+    this.room = 0;
   }
 
   display() {
     fill("red");
     circle(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, this.size);
   }
+
+  checkRoom() {
+    
+    for (let i = 0; i < rooms.length; i++) {
+      if (this.x >= rooms[i].x && this.x <= rooms[i].x+rooms[i].width) {
+        if (this.y >= rooms[i].y && this.y <= rooms[i].y+rooms[i].height) {
+          this.room = i;
+        }
+      }
+    }
+  }
 }
 
 
 const MAXROOMSIZE = 15;
 const MINROOMSIZE = 5;
-const ROOMQUANTITY = 20;
+const ROOMQUANTITY = 15;
 const CELLSIZE = 60;
 
 let cells = [];
@@ -211,6 +223,7 @@ function draw() {
 
   if (keyIsPressed) {
     updateMovement();
+    player.checkRoom();
   }
 
   translate(-player.x*CELLSIZE, -player.y*CELLSIZE);
@@ -220,11 +233,9 @@ function draw() {
 
 function display() {
 
-  for (let someRoom of rooms) {
-    for (let someCell of someRoom.cells) {
-        someCell.determineColor(someRoom.color);
-        someCell.display();
-    }
+  for (let someCell of rooms[player.room].cells) {
+      someCell.determineColor(rooms[player.room].color);
+      someCell.display();
   }
   player.display();
   
@@ -286,6 +297,7 @@ function generateDoors() {
 
 
 function mousePressed() {
+  console.log(player.room);
 }
 
 
