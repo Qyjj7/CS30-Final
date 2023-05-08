@@ -1,8 +1,3 @@
-// Project Title
-// Your Name
-// Description
-
-
 class Room {
   constructor(x, y, w, h) {
     this.width = w;
@@ -143,24 +138,19 @@ class Cell {
   }
 
 
-  adjacentCells() {
+  findWalls() {
 
-    let theseCells = [];
-    for (let someCell of this.cells) {
-      if (someCell.x === this.x && someCell.y === this.y-1) { //north
-        theseCells.push(someCell);
-      }
-      if (someCell.x === this.x && someCell.y === this.y+1) { //south
-        theseCells.push(someCell);
-      }
-      if (someCell.x === this.x+1 && someCell.y === this.y) { //east
-        theseCells.push(someCell);
-      }
-      if (someCell.x === this.x-1 && someCell.y === this.y) { //west
-        theseCells.push(someCell);
-      }
+    for (let direction of directions) {
+      console.log(direction);
     }
-    return theseCells;
+  }
+
+
+  adjacentCell(xMod, yMod, thisRoom) {
+    
+    for (let someCell of thisRoom.cells) {
+      console.log("hi");
+    }
   }
 }
 
@@ -172,7 +162,8 @@ class Player {
     this.hp = 10;
     this.speed = CELLSIZE/550;
     this.size = CELLSIZE/2;
-    this.room = 0;
+    this.currentRoom = 0;
+    this.currentCell = 0;
   }
 
   display() {
@@ -185,11 +176,21 @@ class Player {
     for (let i = 0; i < rooms.length; i++) {
       if (this.x >= rooms[i].x && this.x <= rooms[i].x+rooms[i].width) {
         if (this.y >= rooms[i].y && this.y <= rooms[i].y+rooms[i].height) {
-          this.room = i;
+          this.currentRoom = i;
         }
       }
     }
   }
+
+  checkCell() {
+
+    let roomCells = rooms[this.currentRoom].cells;
+    for (let i = 0; i < roomCells.length; i++) {
+      if (floor(this.x) === roomCells[i].x && floor(this.y) === roomCells[i].y) {
+        this.currentCell = i;
+      }
+    }
+  } 
 }
 
 
@@ -200,11 +201,8 @@ const CELLSIZE = 60;
 
 let cells = [];
 let rooms = [];
-let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
-let startX;
-let startY;
 
 
 function setup() {
@@ -213,7 +211,6 @@ function setup() {
 
   createFirstRoom();
   generateRooms();
-  generateDoors();
 }
 
 
@@ -224,6 +221,7 @@ function draw() {
   if (keyIsPressed) {
     updateMovement();
     player.checkRoom();
+    player.checkCell();
   }
 
   translate(-player.x*CELLSIZE, -player.y*CELLSIZE);
@@ -233,12 +231,11 @@ function draw() {
 
 function display() {
 
-  for (let someCell of rooms[player.room].cells) {
-      someCell.determineColor(rooms[player.room].color);
-      someCell.display();
+  for (let someCell of rooms[player.currentRoom].cells) {
+    someCell.determineColor(rooms[player.currentRoom].color);
+    someCell.display();
   }
   player.display();
-  
 }
 
 
@@ -246,16 +243,14 @@ function createFirstRoom() {
 
   let h = MINROOMSIZE;
   let w = MINROOMSIZE;
-  let x = floor(width/CELLSIZE/2 - w/2);
-  let y = floor(height/CELLSIZE/2 - h/2);
-
-  startX = x;
-  startY = y;
+  
   player = new Player(floor(h/2) + 0.5, floor(w/2) + 0.5);
 
   let someRoom = new Room(0, 0, w, h);
   rooms.push(someRoom);
   someRoom.addCells();
+
+  player.checkCell();
 }
 
 
@@ -284,20 +279,15 @@ function generateRooms() {
       }
     }
   }
-}
-
-
-function generateDoors() {
 
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
   }
-  
 }
 
 
 function mousePressed() {
-  console.log(player.room);
+  console.log(player.currentCell);
 }
 
 
