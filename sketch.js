@@ -122,6 +122,7 @@ class Cell {
     this.y = y;
     this.object = "blank";
     this.color = "white";
+    this.walls = [false, false, false, false]; // NSEW
   }
 
   display() {
@@ -142,14 +143,6 @@ class Cell {
 
     for (let direction of directions) {
       console.log(direction);
-    }
-  }
-
-
-  adjacentCell(xMod, yMod, thisRoom) {
-    
-    for (let someCell of thisRoom.cells) {
-      console.log("hi");
     }
   }
 }
@@ -191,6 +184,23 @@ class Player {
       }
     }
   } 
+
+  checkRoomCollisions(direction) {
+
+    this.checkRoom();
+    this.checkCell();
+    let thisRoom = rooms[this.currentRoom];
+    let thisCell = thisRoom.cells[this.currentCell];
+
+    if (direction === "north") {
+
+      if (thisCell.walls[0]) {
+        this.y = thisCell.y;
+      }
+      
+    }
+  }
+  
 }
 
 
@@ -220,8 +230,6 @@ function draw() {
 
   if (keyIsPressed) {
     updateMovement();
-    player.checkRoom();
-    player.checkCell();
   }
 
   translate(-player.x*CELLSIZE, -player.y*CELLSIZE);
@@ -295,14 +303,18 @@ function updateMovement() {
 
   if (keyIsDown(87)) { //w
     player.y -= player.speed;
+    player.checkRoomCollisions("north");
   }
   if (keyIsDown(83)) { //s
     player.y += player.speed;
+    player.checkRoomCollisions("south");
   }
   if (keyIsDown(65)) { //d
     player.x -= player.speed;
+    player.checkRoomCollisions("east");
   }
   if (keyIsDown(68)) { //a
     player.x += player.speed;
+    player.checkRoomCollisions("west");
   }
 }
