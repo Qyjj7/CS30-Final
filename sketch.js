@@ -141,9 +141,47 @@ class Cell {
 
   findWalls() {
 
-    for (let direction of directions) {
-      console.log(direction);
+    if (this.object !== "door") {
+      for (let i = 0; i < this.walls.length; i++) {
+        if (this.adjacentCell(directions[i]) === "wall") {
+          this.walls[i] = true;
+        }
+      }
     }
+  }
+
+
+  adjacentCell(direction) {
+
+    let xModifier;
+    let yModifier;
+
+    if (direction === "north") {
+      xModifier = 0;
+      yModifier = 1;
+    }
+    if (direction === "south") {
+      xModifier = 0;
+      yModifier = -1;
+    }
+    if (direction === "east") {
+      xModifier = 1;
+      yModifier = 0;
+    }
+    if (direction === "west") {
+      xModifier = -1;
+      yModifier = 0;
+    }
+
+    for (let i = 0; i < rooms[player.currentRoom].cells.length; i++) {
+      let someCell = rooms[player.currentRoom].cells[i];
+      if (someCell.x + xModifier === this.x) {
+        if (someCell.y + yModifier === this.y) {
+          return i;
+        }
+      }
+    }
+    return "wall";
   }
 }
 
@@ -193,14 +231,11 @@ class Player {
     let thisCell = thisRoom.cells[this.currentCell];
 
     if (direction === "north") {
-
-      if (thisCell.walls[0]) {
+      if (thisCell.walls[0] && this.y <= thisCell.y) {
         this.y = thisCell.y;
       }
-      
     }
   }
-  
 }
 
 
@@ -291,11 +326,18 @@ function generateRooms() {
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
   }
+
+  for (let someRoom of rooms) {
+    for (let someCell of someRoom.cells) {
+      someCell.findWalls();
+    }
+  }
 }
 
 
 function mousePressed() {
-  console.log(player.currentCell);
+  let someCell = rooms[player.currentRoom].cells[player.currentCell];
+  someCell.findWalls();
 }
 
 
