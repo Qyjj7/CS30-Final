@@ -6,7 +6,7 @@ class Room {
     this.y = y;
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
-    this.doors = [];
+    this.walls = [];
   }
 
 
@@ -76,13 +76,9 @@ class Room {
 
             if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
               options.push([someCell, otherCell]);
-              //someCell.object = "door";
-              //otherCell.object = "door";
             }
             if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
               options.push([someCell, otherCell]);
-              //someCell.object = "door";
-              //otherCell.object = "door";
             }
           }
         }
@@ -95,6 +91,10 @@ class Room {
         }
       }
     }
+  }
+
+  spawnWalls() {
+
   }
 
 
@@ -122,7 +122,7 @@ class Cell {
     this.y = y;
     this.object = "blank";
     this.color = "white";
-    this.walls = [false, false, false, false]; // NSEW
+    this.walls = new Map();
   }
 
   display() {
@@ -136,16 +136,20 @@ class Cell {
     if (this.object === "door") {
       this.color = "black";
     }
+    if (this.object === "wall") {
+      this.color = "purple";
+    }
   }
 
 
   findWalls() {
 
-    if (this.object !== "door") {
-      for (let i = 0; i < this.walls.length; i++) {
-        if (this.adjacentCell(directions[i]) === "wall") {
-          this.walls[i] = true;
-        }
+    for (let direction of directions) {
+      if (this.adjacentCell(direction) === "wall") {
+        this.walls.set(direction, true);
+      }
+      else {
+        this.walls.set(direction, false);
       }
     }
   }
@@ -230,11 +234,7 @@ class Player {
     let thisRoom = rooms[this.currentRoom];
     let thisCell = thisRoom.cells[this.currentCell];
 
-    if (direction === "north") {
-      if (thisCell.walls[0] && this.y <= thisCell.y) {
-        this.y = thisCell.y;
-      }
-    }
+    return thisCell.walls.get(direction);
   }
 }
 
@@ -343,20 +343,16 @@ function mousePressed() {
 
 function updateMovement() {
 
-  if (keyIsDown(87)) { //w
+  if (keyIsDown(87) && ! player.checkRoomCollisions("north")) { //w
     player.y -= player.speed;
-    player.checkRoomCollisions("north");
   }
-  if (keyIsDown(83)) { //s
+  if (keyIsDown(83) && ! player.checkRoomCollisions("south")) { //s
     player.y += player.speed;
-    player.checkRoomCollisions("south");
   }
-  if (keyIsDown(65)) { //d
+  if (keyIsDown(65) && ! player.checkRoomCollisions("east")) { //d
     player.x -= player.speed;
-    player.checkRoomCollisions("east");
   }
-  if (keyIsDown(68)) { //a
+  if (keyIsDown(68) && ! player.checkRoomCollisions("west")) { //a
     player.x += player.speed;
-    player.checkRoomCollisions("west");
   }
 }
