@@ -9,12 +9,6 @@ class Room {
   }
 
 
-  display() {
-    fill(this.color);
-    rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height* CELLSIZE);
-  }
-
-
   createNeighbor(x, y, w, h) {
 
     let newRoom = new Room(x, y, w, h);
@@ -74,10 +68,10 @@ class Room {
           for (let otherCell of otherRoom.cells) {
 
             if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
-              options.push([someCell, otherCell]);
+              options.push([someCell, otherCell, "horizontal"]);
             }
-            if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
-              options.push([someCell, otherCell]);
+            else if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
+              options.push([someCell, otherCell, "vertical"]);
             }
           }
         }
@@ -87,6 +81,25 @@ class Room {
           chosenDoor[0].object = "door";
           chosenDoor[1].object = "door";
 
+          let w;
+          let h; 
+          let x;
+          let y;
+          if (chosenDoor[2] === "vertical") {
+            w = 1;
+            h = DOORSIZE;
+            x = chosenDoor[1].x;
+            y = chosenDoor[1].y - h/2;
+          }
+          else {
+            w = DOORSIZE;
+            h = 1;
+            x = chosenDoor[1].x - w/2;
+            y = chosenDoor[1].y;
+          }
+
+          let newDoor = new Door(x, y, w, h, chosenDoor[2]);
+          doors.push(newDoor);
         }
       }
     }
@@ -120,7 +133,6 @@ class Cell {
     rect(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, CELLSIZE, CELLSIZE);
   }
 
-
   determineColor(color) {
     this.color = color;
     if (this.object === "door") {
@@ -130,29 +142,22 @@ class Cell {
       this.color = "purple";
     }
   }
+}
 
 
-  adjacentCell(direction) {
+class Door {
+  constructor(x, y, w, h, orientation) {
+    this.x = x;
+    this.y = y;
+    this.width = w;
+    this.height = h;
+    this.type = orientation;
+    this.color = "purple"
+  }
 
-    let xModifier;
-    let yModifier;
-
-    if (direction === "north") {
-      xModifier = 0;
-      yModifier = 1;
-    }
-    if (direction === "south") {
-      xModifier = 0;
-      yModifier = -1;
-    }
-    if (direction === "east") {
-      xModifier = 1;
-      yModifier = 0;
-    }
-    if (direction === "west") {
-      xModifier = -1;
-      yModifier = 0;
-    }
+  display() {
+    fill(this.color);
+    rect(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, this.width*CELLSIZE, this.height*CELLSIZE);
   }
 }
 
@@ -182,6 +187,24 @@ class Player {
       }
     }
   }
+
+
+  checkCollisions() {
+
+    if (this.x <= this.currentRoom.x + this.size/CELLSIZE/2) {
+      this.x = this.currentRoom.x + this.size/CELLSIZE/2;
+    }
+    if (this.x >= this.currentRoom.x + this.currentRoom.width - this.size/CELLSIZE/2) {
+      this.x = this.currentRoom.x + this.currentRoom.width - this.size/CELLSIZE/2;
+    }
+    if (this.y <= this.currentRoom.y + this.size/CELLSIZE/2) {
+      this.y = this.currentRoom.y + this.size/CELLSIZE/2;
+    }
+    if (this.y >= this.currentRoom.y + this.currentRoom.height - this.size/CELLSIZE/2) {
+      this.y = this.currentRoom.y + this.currentRoom.width - this.size/CELLSIZE/2;
+    }
+    
+  }
 }
 
 
@@ -189,8 +212,10 @@ const MAXROOMSIZE = 15;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 15;
 const CELLSIZE = 60;
+const DOORSIZE = 1/5;
 
 let rooms = [];
+let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
 
@@ -219,9 +244,14 @@ function draw() {
 
 function display() {
 
-  for (let someCell of player.currentRoom.cells) {
-    someCell.determineColor(player.currentRoom.color);
-    someCell.display();
+  for (let someRoom of rooms) {
+    for (let someCell of someRoom.cells) {
+      someCell.determineColor(someRoom.color);
+      someCell.display();
+    }
+  }
+  for (let someDoor of doors) {
+    someDoor.display();
   }
   player.display();
 }
@@ -276,6 +306,7 @@ function generateRooms() {
 
 
 function mousePressed() {
+
 }
 
 
@@ -295,4 +326,5 @@ function updateMovement() {
   }
 
   player.checkRoom();
+  //player.checkCollisions();
 }
