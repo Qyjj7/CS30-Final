@@ -6,6 +6,7 @@ class Room {
     this.y = y;
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
+    this.doors = [];
   }
 
 
@@ -99,7 +100,8 @@ class Room {
           }
 
           let newDoor = new Door(x, y, w, h, chosenDoor[2]);
-          doors.push(newDoor);
+          this.doors.push(newDoor);
+          otherRoom.doors.push(newDoor);
         }
       }
     }
@@ -135,12 +137,6 @@ class Cell {
 
   determineColor(color) {
     this.color = color;
-    if (this.object === "door") {
-      this.color = "black";
-    }
-    if (this.object === "wall") {
-      this.color = "purple";
-    }
   }
 }
 
@@ -158,6 +154,16 @@ class Door {
   display() {
     fill(this.color);
     rect(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, this.width*CELLSIZE, this.height*CELLSIZE);
+  }
+
+  playerCollision() {
+
+    if (player.x + player.size/CELLSIZE/2 >= this.x && player.x - player.size/CELLSIZE/2 < this.x+this.width) {
+      if (player.y + player.size/CELLSIZE/2 >= this.y && player.y - player.size/CELLSIZE/2 < this.y+this.height) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -189,21 +195,30 @@ class Player {
   }
 
 
-  checkCollisions() {
+  checkWallCollisions() {
 
-    if (this.x <= this.currentRoom.x + this.size/CELLSIZE/2) {
-      this.x = this.currentRoom.x + this.size/CELLSIZE/2;
+  let walls = true;
+    for (let someDoor of this.currentRoom.doors) {
+      if (someDoor.playerCollision()) {
+        walls = false;
+      }
     }
-    if (this.x >= this.currentRoom.x + this.currentRoom.width - this.size/CELLSIZE/2) {
-      this.x = this.currentRoom.x + this.currentRoom.width - this.size/CELLSIZE/2;
+
+    if (walls) {
+
+      if (this.x <= this.currentRoom.x + this.size / CELLSIZE / 2) {
+        this.x = this.currentRoom.x + this.size / CELLSIZE / 2;
+      }
+      if (this.x >= this.currentRoom.x + this.currentRoom.width - this.size / CELLSIZE / 2) {
+        this.x = this.currentRoom.x + this.currentRoom.width - this.size / CELLSIZE / 2;
+      }
+      if (this.y <= this.currentRoom.y + this.size / CELLSIZE / 2) {
+        this.y = this.currentRoom.y + this.size / CELLSIZE / 2;
+      }
+      if (this.y >= this.currentRoom.y + this.currentRoom.height - this.size / CELLSIZE / 2) {
+        this.y = this.currentRoom.y + this.currentRoom.height - this.size / CELLSIZE / 2;
+      }
     }
-    if (this.y <= this.currentRoom.y + this.size/CELLSIZE/2) {
-      this.y = this.currentRoom.y + this.size/CELLSIZE/2;
-    }
-    if (this.y >= this.currentRoom.y + this.currentRoom.height - this.size/CELLSIZE/2) {
-      this.y = this.currentRoom.y + this.currentRoom.width - this.size/CELLSIZE/2;
-    }
-    
   }
 }
 
@@ -243,16 +258,15 @@ function draw() {
 
 
 function display() {
-
-  for (let someRoom of rooms) {
-    for (let someCell of someRoom.cells) {
-      someCell.determineColor(someRoom.color);
-      someCell.display();
-    }
+  //player.currentRoom
+  for (let someCell of player.currentRoom.cells) {
+    //someCell.determineColor(player.currentRoom.color);
+    someCell.display();
   }
-  for (let someDoor of doors) {
+  for (let someDoor of player.currentRoom.doors) {
     someDoor.display();
   }
+
   player.display();
 }
 
@@ -307,6 +321,19 @@ function generateRooms() {
 
 function mousePressed() {
 
+  if (keyIsDown(49)) {
+    player.y -= 2
+  }
+  if (keyIsDown(50)) {
+    player.y += 2
+  }
+  if (keyIsDown(51)) {
+    player.x += 2
+  }
+  if (keyIsDown(52)) {
+    player.x -= 2
+  }
+    
 }
 
 
@@ -326,5 +353,5 @@ function updateMovement() {
   }
 
   player.checkRoom();
-  //player.checkCollisions();
+  player.checkWallCollisions();
 }
