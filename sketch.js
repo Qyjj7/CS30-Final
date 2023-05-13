@@ -6,7 +6,6 @@ class Room {
     this.y = y;
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
-    this.walls = [];
   }
 
 
@@ -93,26 +92,18 @@ class Room {
     }
   }
 
-  spawnWalls() {
-
-  }
-
 
   addCells() {
 
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         
-        let xPos = x + this.x;
-        let yPos = y + this.y;
-        let newCell = new Cell(xPos, yPos);
+        let newCell = new Cell(x + this.x, y + this.y);
 
-        cells.push(newCell);
         this.cells.push(newCell);
       }
     }
   }
-
 }
 
 
@@ -122,7 +113,6 @@ class Cell {
     this.y = y;
     this.object = "blank";
     this.color = "white";
-    this.walls = new Map();
   }
 
   display() {
@@ -138,19 +128,6 @@ class Cell {
     }
     if (this.object === "wall") {
       this.color = "purple";
-    }
-  }
-
-
-  findWalls() {
-
-    for (let direction of directions) {
-      if (this.adjacentCell(direction) === "wall") {
-        this.walls.set(direction, true);
-      }
-      else {
-        this.walls.set(direction, false);
-      }
     }
   }
 
@@ -176,16 +153,6 @@ class Cell {
       xModifier = -1;
       yModifier = 0;
     }
-
-    for (let i = 0; i < rooms[player.currentRoom].cells.length; i++) {
-      let someCell = rooms[player.currentRoom].cells[i];
-      if (someCell.x + xModifier === this.x) {
-        if (someCell.y + yModifier === this.y) {
-          return i;
-        }
-      }
-    }
-    return "wall";
   }
 }
 
@@ -197,8 +164,7 @@ class Player {
     this.hp = 10;
     this.speed = CELLSIZE/550;
     this.size = CELLSIZE/2;
-    this.currentRoom = 0;
-    this.currentCell = 0;
+    this.currentRoom;
   }
 
   display() {
@@ -208,33 +174,13 @@ class Player {
 
   checkRoom() {
     
-    for (let i = 0; i < rooms.length; i++) {
-      if (this.x >= rooms[i].x && this.x <= rooms[i].x+rooms[i].width) {
-        if (this.y >= rooms[i].y && this.y <= rooms[i].y+rooms[i].height) {
-          this.currentRoom = i;
+    for (let someRoom of rooms) {
+      if (this.x >= someRoom.x && this.x <= someRoom.x+someRoom.width) {
+        if (this.y >= someRoom.y && this.y <= someRoom.y+someRoom.height) {
+          this.currentRoom = someRoom;
         }
       }
     }
-  }
-
-  checkCell() {
-
-    let roomCells = rooms[this.currentRoom].cells;
-    for (let i = 0; i < roomCells.length; i++) {
-      if (floor(this.x) === roomCells[i].x && floor(this.y) === roomCells[i].y) {
-        this.currentCell = i;
-      }
-    }
-  } 
-
-  checkRoomCollisions(direction) {
-
-    this.checkRoom();
-    this.checkCell();
-    let thisRoom = rooms[this.currentRoom];
-    let thisCell = thisRoom.cells[this.currentCell];
-
-    return thisCell.walls.get(direction);
   }
 }
 
@@ -244,7 +190,6 @@ const MINROOMSIZE = 5;
 const ROOMQUANTITY = 15;
 const CELLSIZE = 60;
 
-let cells = [];
 let rooms = [];
 let directions = ["north", "south", "east", "west"];
 let player;
@@ -274,8 +219,8 @@ function draw() {
 
 function display() {
 
-  for (let someCell of rooms[player.currentRoom].cells) {
-    someCell.determineColor(rooms[player.currentRoom].color);
+  for (let someCell of player.currentRoom.cells) {
+    someCell.determineColor(player.currentRoom.color);
     someCell.display();
   }
   player.display();
@@ -293,7 +238,7 @@ function createFirstRoom() {
   rooms.push(someRoom);
   someRoom.addCells();
 
-  player.checkCell();
+  player.checkRoom();
 }
 
 
@@ -327,32 +272,27 @@ function generateRooms() {
     someRoom.spawnDoors();
   }
 
-  for (let someRoom of rooms) {
-    for (let someCell of someRoom.cells) {
-      someCell.findWalls();
-    }
-  }
 }
 
 
 function mousePressed() {
-  let someCell = rooms[player.currentRoom].cells[player.currentCell];
-  someCell.findWalls();
 }
 
 
 function updateMovement() {
 
-  if (keyIsDown(87) && ! player.checkRoomCollisions("north")) { //w
+  if (keyIsDown(87)) { //w
     player.y -= player.speed;
   }
-  if (keyIsDown(83) && ! player.checkRoomCollisions("south")) { //s
+  if (keyIsDown(83)) { //s
     player.y += player.speed;
   }
-  if (keyIsDown(65) && ! player.checkRoomCollisions("east")) { //d
+  if (keyIsDown(65)) { //d
     player.x -= player.speed;
   }
-  if (keyIsDown(68) && ! player.checkRoomCollisions("west")) { //a
+  if (keyIsDown(68)) { //a
     player.x += player.speed;
   }
+
+  player.checkRoom();
 }
