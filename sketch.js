@@ -148,7 +148,7 @@ class Door {
     this.width = w;
     this.height = h;
     this.type = orientation;
-    this.color = "purple"
+    this.color = "purple";
   }
 
   display() {
@@ -198,7 +198,7 @@ class Player {
 
   checkWallCollisions() {
 
-  let walls = true;
+    let walls = true;
     for (let someDoor of this.currentRoom.doors) {
       if (someDoor.playerCollision()) {
         walls = false;
@@ -225,14 +225,31 @@ class Player {
 
 class Longsword {
   constructor() {
-    this.reach = 1.5;
-    this.origin = createVector(player.x, player.y);
-    this.point = createVector(player.x, player.y + this.reach);
+    this.point = createVector(player.x, player.y);
+    this.swingWidth = 1.5;
+    this.swingHeight = 0.8;
+    this.swingX = player.x;
+    this.swingY = player.y;
   }
 
   display() {
+    fill("black");
+    line(player.x*CELLSIZE, player.y*CELLSIZE, this.point.x*CELLSIZE, this.point.y*CELLSIZE);
+    rect(this.swingX*CELLSIZE, this.swingY*CELLSIZE, this.swingWidth*CELLSIZE, this.swingHeight*CELLSIZE);
+  }
 
-    line(player.x*CELLSIZE, player.y*CELLSIZE, this.point.x*CELLSIZE, this.point.y*CELLSIZE)
+  update() {
+    this.point.x = mouseX - width/2 + player.x;
+    this.point.y = mouseY - height/2 + player.y;
+  }
+
+  attack(direction) {
+
+    if (direction === "north") {
+
+      this.swingX = player.x - this.swingWidth/2;
+      this.swingY = player.y - this. swingHeight;
+    }
   }
 }
 
@@ -265,6 +282,8 @@ function draw() {
   if (keyIsPressed) {
     updateMovement();
   }
+
+  player.weapon.update();
 
   translate(-player.x*CELLSIZE + width/2, -player.y*CELLSIZE + height/2);
   display();
@@ -338,18 +357,19 @@ function generateRooms() {
 function mousePressed() {
 
   if (keyIsDown(49)) {
-    player.y -= 2
+    player.y -= 2;
   }
   if (keyIsDown(50)) {
-    player.y += 2
+    player.y += 2;
   }
   if (keyIsDown(51)) {
-    player.x += 2
+    player.x += 2;
   }
   if (keyIsDown(52)) {
-    player.x -= 2
+    player.x -= 2;
   }
-    
+
+  player.weapon.attack("north");
 }
 
 
