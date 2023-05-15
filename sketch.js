@@ -132,7 +132,7 @@ class Cell {
 
   display() {
     fill(this.color);
-    rect(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, CELLSIZE, CELLSIZE);
+    rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
   }
 
   determineColor(color) {
@@ -153,7 +153,7 @@ class Door {
 
   display() {
     fill(this.color);
-    rect(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, this.width*CELLSIZE, this.height*CELLSIZE);
+    rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
   }
 
   playerCollision() {
@@ -176,11 +176,12 @@ class Player {
     this.speed = CELLSIZE/550;
     this.size = CELLSIZE/2;
     this.currentRoom;
+    this.weapon;
   }
 
   display() {
     fill("red");
-    circle(this.x*CELLSIZE + width/2, this.y*CELLSIZE + height/2, this.size);
+    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size);
   }
 
   checkRoom() {
@@ -205,7 +206,6 @@ class Player {
     }
 
     if (walls) {
-
       if (this.x <= this.currentRoom.x + this.size / CELLSIZE / 2) {
         this.x = this.currentRoom.x + this.size / CELLSIZE / 2;
       }
@@ -223,7 +223,21 @@ class Player {
 }
 
 
-const MAXROOMSIZE = 15;
+class Longsword {
+  constructor() {
+    this.reach = 1.5;
+    this.origin = createVector(player.x, player.y);
+    this.point = createVector(player.x, player.y + this.reach);
+  }
+
+  display() {
+
+    line(player.x*CELLSIZE, player.y*CELLSIZE, this.point.x*CELLSIZE, this.point.y*CELLSIZE)
+  }
+}
+
+
+const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 15;
 const CELLSIZE = 60;
@@ -252,7 +266,7 @@ function draw() {
     updateMovement();
   }
 
-  translate(-player.x*CELLSIZE, -player.y*CELLSIZE);
+  translate(-player.x*CELLSIZE + width/2, -player.y*CELLSIZE + height/2);
   display();
 }
 
@@ -268,6 +282,7 @@ function display() {
   }
 
   player.display();
+  player.weapon.display();
 }
 
 
@@ -283,6 +298,7 @@ function createFirstRoom() {
   someRoom.addCells();
 
   player.checkRoom();
+  player.weapon = new Longsword();
 }
 
 
