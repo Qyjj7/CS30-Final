@@ -225,31 +225,55 @@ class Player {
 
 class Longsword {
   constructor() {
-    this.point = createVector(player.x, player.y);
-    this.swingWidth = 1.5;
-    this.swingHeight = 0.8;
-    this.swingX = player.x;
-    this.swingY = player.y;
+    this.width = 1.2;
+    this.height = 0.8;
+    this.swingX;
+    this.swingY;
+    this.swinging = false;
   }
 
   display() {
-    fill("black");
-    line(player.x*CELLSIZE, player.y*CELLSIZE, this.point.x*CELLSIZE, this.point.y*CELLSIZE);
-    rect(this.swingX*CELLSIZE, this.swingY*CELLSIZE, this.swingWidth*CELLSIZE, this.swingHeight*CELLSIZE);
-  }
-
-  update() {
-    this.point.x = mouseX - width/2 + player.x;
-    this.point.y = mouseY - height/2 + player.y;
+    noFill();
+    if (this.swinging) {
+      rect(this.swingX*CELLSIZE, this.swingY*CELLSIZE, this.swingWidth*CELLSIZE, this.swingHeight*CELLSIZE);
+    }
   }
 
   attack(direction) {
 
+    console.log("SWING!");
     if (direction === "north") {
-
-      this.swingX = player.x - this.swingWidth/2;
-      this.swingY = player.y - this. swingHeight;
+      this.swingX = player.x - this.width/2;
+      this.swingY = player.y - this.height;
+      this.swingWidth = this.width;
+      this.swingHeight = this.height;
     }
+
+    if (direction === "south") {
+      this.swingX = player.x - this.width/2;
+      this.swingY = player.y;
+      this.swingWidth = this.width;
+      this.swingHeight = this.height;
+    }
+
+    if (direction === "east") {
+      this.swingX = player.x;
+      this.swingY = player.y - this.width/2;
+      this.swingWidth = this.height;
+      this.swingHeight = this.width;
+    }
+
+    if (direction === "west") {
+      this.swingX = player.x - this.height;
+      this.swingY = player.y - this.width/2;
+      this.swingWidth = this.height;
+      this.swingHeight = this.width;
+    }
+
+    this.swinging = true;
+    setTimeout(() => {
+      this.swinging = false;
+    }, 600);
   }
 }
 
@@ -280,10 +304,8 @@ function draw() {
   background(220);
 
   if (keyIsPressed) {
-    updateMovement();
+    playerInput();
   }
-
-  player.weapon.update();
 
   translate(-player.x*CELLSIZE + width/2, -player.y*CELLSIZE + height/2);
   display();
@@ -369,11 +391,11 @@ function mousePressed() {
     player.x -= 2;
   }
 
-  player.weapon.attack("north");
+  player.weapon.attack("south");
 }
 
 
-function updateMovement() {
+function playerInput() {
 
   if (keyIsDown(87)) { //w
     player.y -= player.speed;
@@ -390,4 +412,21 @@ function updateMovement() {
 
   player.checkRoom();
   player.checkWallCollisions();
+
+  if (! player.weapon.swinging) {
+
+    if (keyIsDown(38)) { //up
+      player.weapon.attack("north");
+    }
+    else if (keyIsDown(40)) { //down
+      player.weapon.attack("south");
+    }
+    else if (keyIsDown(37)) { //left
+      player.weapon.attack("west");
+    }
+    else if (keyIsDown(39)) { //right
+      player.weapon.attack("east");
+    }
+  }
+  
 }
