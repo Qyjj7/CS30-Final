@@ -172,8 +172,12 @@ class Player {
   constructor(x, y) {
     this.x = x;
     this.y = y;
+    this.dx = 0;
+    this.dy = 0;
+    this.acceleration = 0.015;
+    this.topSpeed = 0.05;
+    this.notMoving = true;
     this.hp = 10;
-    this.speed = CELLSIZE/550;
     this.size = CELLSIZE/2;
     this.currentRoom;
     this.weapon;
@@ -182,6 +186,32 @@ class Player {
   display() {
     fill("red");
     circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size);
+  }
+
+  updateMovement() {
+    if (abs(this.dy) < this.acceleration) {
+      this.dy = 0;
+    }
+    if (abs(this.dx) < this.acceleration) {
+      this.dx = 0;
+    }
+    this.y += this.dy;
+    this.x += this.dx;
+  }
+
+  stopMoving() {
+    if (this.dy > 0) {
+      this.dy -= this.acceleration;
+    }
+    if (this.dy < 0) {
+      this.dy += this.acceleration;
+    }
+    if (this.dx > 0) {
+      this.dx -= this.acceleration;
+    }
+    if (this.dx < 0) {
+      this.dx += this.acceleration;
+    }
   }
 
   checkRoom() {
@@ -306,6 +336,14 @@ function draw() {
   if (keyIsPressed) {
     playerInput();
   }
+  else {
+    player.stopMoving();
+  }
+
+  player.updateMovement();
+
+  player.checkRoom();
+  player.checkWallCollisions();
 
   translate(-player.x*CELLSIZE + width/2, -player.y*CELLSIZE + height/2);
   display();
@@ -397,21 +435,18 @@ function mousePressed() {
 
 function playerInput() {
 
-  if (keyIsDown(87)) { //w
-    player.y -= player.speed;
+  if (keyIsDown(87) && player.dy > -player.topSpeed) { //w
+    player.dy -= player.acceleration;
   }
-  if (keyIsDown(83)) { //s
-    player.y += player.speed;
+  if (keyIsDown(83) && player.dy < player.topSpeed) { //s
+    player.dy += player.acceleration;
   }
-  if (keyIsDown(65)) { //d
-    player.x -= player.speed;
+  if (keyIsDown(65) && player.dx > -player.topSpeed) { //d
+    player.dx -= player.acceleration;
   }
-  if (keyIsDown(68)) { //a
-    player.x += player.speed;
+  if (keyIsDown(68) && player.dx < player.topSpeed) { //a
+    player.dx += player.acceleration;
   }
-
-  player.checkRoom();
-  player.checkWallCollisions();
 
   if (! player.weapon.swinging) {
 
@@ -428,5 +463,4 @@ function playerInput() {
       player.weapon.attack("east");
     }
   }
-  
 }
