@@ -119,6 +119,16 @@ class Room {
       }
     }
   }
+
+
+  populate() {
+
+    let enemyCount = this.width*this.height/8;
+
+    for (let i = 0; i < enemyCount; i++) {
+      console.log("spawn enemy");
+    }
+  }
 }
 
 
@@ -199,18 +209,24 @@ class Player {
     this.x += this.dx;
   }
 
-  stopMoving() {
-    if (this.dy > 0) {
-      this.dy -= this.acceleration;
+  stopMoving(axis) {
+
+    if (axis === "y") {
+      if (this.dy > 0) {
+        this.dy -= this.acceleration;
+      }
+      if (this.dy < 0) {
+        this.dy += this.acceleration;
+      }
     }
-    if (this.dy < 0) {
-      this.dy += this.acceleration;
-    }
-    if (this.dx > 0) {
-      this.dx -= this.acceleration;
-    }
-    if (this.dx < 0) {
-      this.dx += this.acceleration;
+
+    if (axis === "x") {
+      if (this.dx > 0) {
+        this.dx -= this.acceleration;
+      }
+      if (this.dx < 0) {
+        this.dx += this.acceleration;
+      }
     }
   }
 
@@ -308,6 +324,20 @@ class Longsword {
 }
 
 
+class Enemy {
+  constructor(x, y, room) {
+    this.x = x;
+    this.y = y;
+    this.room = room;
+  }
+
+  display() {
+    fill("black");
+    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size);
+  }
+}
+
+
 const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 15;
@@ -318,6 +348,7 @@ let rooms = [];
 let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
+let deltaMillis = 0;
 
 
 function setup() {
@@ -333,12 +364,7 @@ function draw() {
 
   background(220);
 
-  if (keyIsPressed) {
-    playerInput();
-  }
-  else {
-    player.stopMoving();
-  }
+  playerInput();
 
   player.updateMovement();
 
@@ -409,8 +435,8 @@ function generateRooms() {
 
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
+    someRoom.populate();
   }
-
 }
 
 
@@ -435,18 +461,30 @@ function mousePressed() {
 
 function playerInput() {
 
-  if (keyIsDown(87) && player.dy > -player.topSpeed) { //w
-    player.dy -= player.acceleration;
+  if (keyIsDown(87) || keyIsDown(83)) {
+    if (keyIsDown(87) && player.dy > -player.topSpeed) { //w
+      player.dy -= player.acceleration;
+    }
+    if (keyIsDown(83) && player.dy < player.topSpeed) { //s
+      player.dy += player.acceleration;
+    }
   }
-  if (keyIsDown(83) && player.dy < player.topSpeed) { //s
-    player.dy += player.acceleration;
+  else {
+    player.stopMoving("y");
   }
-  if (keyIsDown(65) && player.dx > -player.topSpeed) { //d
-    player.dx -= player.acceleration;
+
+  if (keyIsDown(65) || keyIsDown(68)) {
+    if (keyIsDown(65) && player.dx > -player.topSpeed) { //d
+      player.dx -= player.acceleration;
+    }
+    if (keyIsDown(68) && player.dx < player.topSpeed) { //a
+      player.dx += player.acceleration;
+    }
   }
-  if (keyIsDown(68) && player.dx < player.topSpeed) { //a
-    player.dx += player.acceleration;
+  else {
+    player.stopMoving("x");
   }
+  
 
   if (! player.weapon.swinging) {
 
