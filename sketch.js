@@ -7,6 +7,7 @@ class Room {
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
     this.doors = [];
+    this.enemies = [];
   }
 
 
@@ -123,10 +124,20 @@ class Room {
 
   populate() {
 
-    let enemyCount = this.width*this.height/8;
+    if (player.currentRoom !== this) {
 
-    for (let i = 0; i < enemyCount; i++) {
-      console.log("spawn enemy");
+      let enemyCount = this.width*this.height/15;
+      let tempCells = structuredClone(this.cells);
+      for (let i = this.cells.length-1; i >= 0; i--) {
+        if (this.cells[i].object !== "blank") {
+          tempCells.splice(i, 1);
+        }
+      }
+      for (let i = 0; i < enemyCount; i++) {
+        let chosenCell = random(tempCells);
+        let enemy = new Enemy(chosenCell.x + 0.5, chosenCell.y + 0.5, this);
+        this.enemies.push(enemy);
+      }
     }
   }
 }
@@ -168,8 +179,8 @@ class Door {
 
   playerCollision() {
 
-    if (player.x + player.size/CELLSIZE/2 >= this.x && player.x - player.size/CELLSIZE/2 < this.x+this.width) {
-      if (player.y + player.size/CELLSIZE/2 >= this.y && player.y - player.size/CELLSIZE/2 < this.y+this.height) {
+    if (player.x + player.size/2 >= this.x && player.x - player.size/2 < this.x+this.width) {
+      if (player.y + player.size/2 >= this.y && player.y - player.size/2 < this.y+this.height) {
         return true;
       }
     }
@@ -185,17 +196,17 @@ class Player {
     this.dx = 0;
     this.dy = 0;
     this.acceleration = 0.015;
-    this.topSpeed = 0.05;
+    this.topSpeed = 0.07;
     this.notMoving = true;
     this.hp = 10;
-    this.size = CELLSIZE/2;
+    this.size = 0.5;
     this.currentRoom;
     this.weapon;
   }
 
   display() {
     fill("red");
-    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size);
+    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size*CELLSIZE);
   }
 
   updateMovement() {
@@ -252,17 +263,17 @@ class Player {
     }
 
     if (walls) {
-      if (this.x <= this.currentRoom.x + this.size / CELLSIZE / 2) {
-        this.x = this.currentRoom.x + this.size / CELLSIZE / 2;
+      if (this.x <= this.currentRoom.x + this.size / 2) {
+        this.x = this.currentRoom.x + this.size / 2;
       }
-      if (this.x >= this.currentRoom.x + this.currentRoom.width - this.size / CELLSIZE / 2) {
-        this.x = this.currentRoom.x + this.currentRoom.width - this.size / CELLSIZE / 2;
+      if (this.x >= this.currentRoom.x + this.currentRoom.width - this.size / 2) {
+        this.x = this.currentRoom.x + this.currentRoom.width - this.size / 2;
       }
-      if (this.y <= this.currentRoom.y + this.size / CELLSIZE / 2) {
-        this.y = this.currentRoom.y + this.size / CELLSIZE / 2;
+      if (this.y <= this.currentRoom.y + this.size / 2) {
+        this.y = this.currentRoom.y + this.size / 2;
       }
-      if (this.y >= this.currentRoom.y + this.currentRoom.height - this.size / CELLSIZE / 2) {
-        this.y = this.currentRoom.y + this.currentRoom.height - this.size / CELLSIZE / 2;
+      if (this.y >= this.currentRoom.y + this.currentRoom.height - this.size / 2) {
+        this.y = this.currentRoom.y + this.currentRoom.height - this.size / 2;
       }
     }
   }
@@ -271,8 +282,7 @@ class Player {
 
 class Longsword {
   constructor() {
-    this.width = 1.2;
-    this.height = 0.8;
+    this.radius = 0.4;
     this.swingX;
     this.swingY;
     this.swinging = false;
@@ -281,7 +291,7 @@ class Longsword {
   display() {
     noFill();
     if (this.swinging) {
-      rect(this.swingX*CELLSIZE, this.swingY*CELLSIZE, this.swingWidth*CELLSIZE, this.swingHeight*CELLSIZE);
+      circle(this.swingX*CELLSIZE, this.swingY*CELLSIZE, this.radius*2*CELLSIZE);
     }
   }
 
@@ -289,31 +299,23 @@ class Longsword {
 
     console.log("SWING!");
     if (direction === "north") {
-      this.swingX = player.x - this.width/2;
-      this.swingY = player.y - this.height;
-      this.swingWidth = this.width;
-      this.swingHeight = this.height;
+      this.swingX = player.x;
+      this.swingY = player.y - player.size;
     }
 
     if (direction === "south") {
-      this.swingX = player.x - this.width/2;
-      this.swingY = player.y;
-      this.swingWidth = this.width;
-      this.swingHeight = this.height;
+      this.swingX = player.x;
+      this.swingY = player.y + player.size;
     }
 
     if (direction === "east") {
-      this.swingX = player.x;
-      this.swingY = player.y - this.width/2;
-      this.swingWidth = this.height;
-      this.swingHeight = this.width;
+      this.swingX = player.x + player.size;
+      this.swingY = player.y;
     }
 
     if (direction === "west") {
-      this.swingX = player.x - this.height;
-      this.swingY = player.y - this.width/2;
-      this.swingWidth = this.height;
-      this.swingHeight = this.width;
+      this.swingX = player.x - player.size;
+      this.swingY = player.y;
     }
 
     this.swinging = true;
@@ -329,11 +331,12 @@ class Enemy {
     this.x = x;
     this.y = y;
     this.room = room;
+    this.size = 0.75;
   }
 
   display() {
     fill("black");
-    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size);
+    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size*CELLSIZE);
   }
 }
 
@@ -348,7 +351,6 @@ let rooms = [];
 let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
-let deltaMillis = 0;
 
 
 function setup() {
@@ -377,13 +379,15 @@ function draw() {
 
 
 function display() {
-  //player.currentRoom
+
   for (let someCell of player.currentRoom.cells) {
-    //someCell.determineColor(player.currentRoom.color);
     someCell.display();
   }
   for (let someDoor of player.currentRoom.doors) {
     someDoor.display();
+  }
+  for (let someEnemy of player.currentRoom.enemies) {
+    someEnemy.display();
   }
 
   player.display();
@@ -454,8 +458,6 @@ function mousePressed() {
   if (keyIsDown(52)) {
     player.x -= 2;
   }
-
-  player.weapon.attack("south");
 }
 
 
