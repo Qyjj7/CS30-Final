@@ -179,8 +179,8 @@ class Door {
 
   playerCollision() {
 
-    if (player.x + player.size/2 >= this.x && player.x - player.size/2 < this.x+this.width) {
-      if (player.y + player.size/2 >= this.y && player.y - player.size/2 < this.y+this.height) {
+    if (player.pos.x + player.size/2 >= this.x && player.pos.x - player.size/2 < this.x+this.width) {
+      if (player.pos.y + player.size/2 >= this.y && player.pos.y - player.size/2 < this.y+this.height) {
         return true;
       }
     }
@@ -191,10 +191,8 @@ class Door {
 
 class Player {
   constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.dx = 0;
-    this.dy = 0;
+    this.pos = createVector(x, y);
+    this.vel = createVector(0, 0);
     this.acceleration = 0.015;
     this.topSpeed = 0.07;
     this.notMoving = true;
@@ -206,37 +204,35 @@ class Player {
 
   display() {
     fill("red");
-    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size*CELLSIZE);
+    circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
   }
 
   updateMovement() {
-    if (abs(this.dy) < this.acceleration) {
-      this.dy = 0;
+    if (abs(this.vel.mag) < this.acceleration) {
+      this.vel.set(0);
     }
-    if (abs(this.dx) < this.acceleration) {
-      this.dx = 0;
-    }
-    this.y += this.dy;
-    this.x += this.dx;
+    
+    this.pos.y += this.vel.y;
+    this.pos.x += this.vel.x;
   }
 
-  stopMoving(axis) {
+  stopMoving() {
 
-    if (axis === "y") {
-      if (this.dy > 0) {
-        this.dy -= this.acceleration;
+    if (! keyIsDown(87) && ! keyIsDown(83)) {
+      if (this.vel.y > 0) {
+        this.vel.y -= this.acceleration;
       }
-      if (this.dy < 0) {
-        this.dy += this.acceleration;
+      if (this.vel.y < 0) {
+        this.vel.y += this.acceleration;
       }
     }
 
-    if (axis === "x") {
-      if (this.dx > 0) {
-        this.dx -= this.acceleration;
+    if (! keyIsDown(65) && ! keyIsDown(68)) {
+      if (this.vel.x > 0) {
+        this.vel.x -= this.acceleration;
       }
-      if (this.dx < 0) {
-        this.dx += this.acceleration;
+      if (this.vel.x < 0) {
+        this.vel.x += this.acceleration;
       }
     }
   }
@@ -244,8 +240,8 @@ class Player {
   checkRoom() {
     
     for (let someRoom of rooms) {
-      if (this.x >= someRoom.x && this.x <= someRoom.x+someRoom.width) {
-        if (this.y >= someRoom.y && this.y <= someRoom.y+someRoom.height) {
+      if (this.pos.x >= someRoom.x && this.pos.x <= someRoom.x+someRoom.width) {
+        if (this.pos.y >= someRoom.y && this.pos.y <= someRoom.y+someRoom.height) {
           this.currentRoom = someRoom;
         }
       }
@@ -263,17 +259,17 @@ class Player {
     }
 
     if (walls) {
-      if (this.x <= this.currentRoom.x + this.size / 2) {
-        this.x = this.currentRoom.x + this.size / 2;
+      if (this.pos.x <= this.currentRoom.x + this.size / 2) {
+        this.pos.x = this.currentRoom.x + this.size / 2;
       }
-      if (this.x >= this.currentRoom.x + this.currentRoom.width - this.size / 2) {
-        this.x = this.currentRoom.x + this.currentRoom.width - this.size / 2;
+      if (this.pos.x >= this.currentRoom.x + this.currentRoom.width - this.size / 2) {
+        this.pos.x = this.currentRoom.x + this.currentRoom.width - this.size / 2;
       }
-      if (this.y <= this.currentRoom.y + this.size / 2) {
-        this.y = this.currentRoom.y + this.size / 2;
+      if (this.pos.y <= this.currentRoom.y + this.size / 2) {
+        this.pos.y = this.currentRoom.y + this.size / 2;
       }
-      if (this.y >= this.currentRoom.y + this.currentRoom.height - this.size / 2) {
-        this.y = this.currentRoom.y + this.currentRoom.height - this.size / 2;
+      if (this.pos.y >= this.currentRoom.y + this.currentRoom.height - this.size / 2) {
+        this.pos.y = this.currentRoom.y + this.currentRoom.height - this.size / 2;
       }
     }
   }
@@ -299,23 +295,23 @@ class Longsword {
 
     console.log("SWING!");
     if (direction === "north") {
-      this.swingX = player.x;
-      this.swingY = player.y - player.size;
+      this.swingX = player.pos.x;
+      this.swingY = player.pos.y - player.size;
     }
 
     if (direction === "south") {
-      this.swingX = player.x;
-      this.swingY = player.y + player.size;
+      this.swingX = player.pos.x;
+      this.swingY = player.pos.y + player.size;
     }
 
     if (direction === "east") {
-      this.swingX = player.x + player.size;
-      this.swingY = player.y;
+      this.swingX = player.pos.x + player.size;
+      this.swingY = player.pos.y;
     }
 
     if (direction === "west") {
-      this.swingX = player.x - player.size;
-      this.swingY = player.y;
+      this.swingX = player.pos.x - player.size;
+      this.swingY = player.pos.y;
     }
 
     this.swinging = true;
@@ -368,12 +364,13 @@ function draw() {
 
   playerInput();
 
+  player.stopMoving();
   player.updateMovement();
 
   player.checkRoom();
   player.checkWallCollisions();
 
-  translate(-player.x*CELLSIZE + width/2, -player.y*CELLSIZE + height/2);
+  translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
   display();
 }
 
@@ -446,46 +443,25 @@ function generateRooms() {
 
 function mousePressed() {
 
-  if (keyIsDown(49)) {
-    player.y -= 2;
-  }
-  if (keyIsDown(50)) {
-    player.y += 2;
-  }
-  if (keyIsDown(51)) {
-    player.x += 2;
-  }
-  if (keyIsDown(52)) {
-    player.x -= 2;
-  }
 }
 
 
 function playerInput() {
 
-  if (keyIsDown(87) || keyIsDown(83)) {
-    if (keyIsDown(87) && player.dy > -player.topSpeed) { //w
-      player.dy -= player.acceleration;
-    }
-    if (keyIsDown(83) && player.dy < player.topSpeed) { //s
-      player.dy += player.acceleration;
-    }
+  if (keyIsDown(87) && player.vel.y > -player.topSpeed) { //w
+    player.vel.y -= player.acceleration;
   }
-  else {
-    player.stopMoving("y");
+  if (keyIsDown(83) && player.vel.y < player.topSpeed) { //s
+    player.vel.y += player.acceleration;
   }
-
-  if (keyIsDown(65) || keyIsDown(68)) {
-    if (keyIsDown(65) && player.dx > -player.topSpeed) { //d
-      player.dx -= player.acceleration;
-    }
-    if (keyIsDown(68) && player.dx < player.topSpeed) { //a
-      player.dx += player.acceleration;
-    }
+  
+  if (keyIsDown(65) && player.vel.x > -player.topSpeed) { //d
+    player.vel.x -= player.acceleration;
   }
-  else {
-    player.stopMoving("x");
+  if (keyIsDown(68) && player.vel.x < player.topSpeed) { //a
+    player.vel.x += player.acceleration;
   }
+  
   
 
   if (! player.weapon.swinging) {
