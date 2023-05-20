@@ -193,9 +193,10 @@ class Player {
   constructor(x, y) {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
-    this.acceleration = 0.015;
-    this.topSpeed = 0.07;
-    this.notMoving = true;
+    this.input = createVector(0, 0);
+    this.acceleration = 0.005;
+    this.friction = 0.01;
+    this.topSpeed = 0.06;
     this.hp = 10;
     this.size = 0.5;
     this.currentRoom;
@@ -207,35 +208,42 @@ class Player {
     circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
   }
 
+
   updateMovement() {
-    if (abs(this.vel.mag) < this.acceleration) {
-      this.vel.set(0);
+
+    if (this.input.x === 0 && this.input.y === 0) {
+
+      if (this.vel.mag() >= this.friction) {
+  
+        if (this.vel.y > 0) {
+          this.vel.y -= this.friction;
+        }
+        else if (this.vel.y < 0) {
+          this.vel.y += this.friction;
+        }
+      
+        if (this.vel.x > 0) {
+          this.vel.x -= this.friction;
+        }
+        else if (this.vel.x < 0) {
+          this.vel.x += this.friction;
+        }
+      }
+
+      else {
+        this.vel.set(0);
+      }
     }
-    
-    this.pos.y += this.vel.y;
-    this.pos.x += this.vel.x;
+
+    else {
+      this.vel.x += this.acceleration*this.input.x;
+      this.vel.y += this.acceleration*this.input.y;
+      this.vel = this.vel.limit(this.topSpeed);
+    }
+
+    this.pos.add(this.vel);
   }
 
-  stopMoving() {
-
-    if (! keyIsDown(87) && ! keyIsDown(83)) {
-      if (this.vel.y > 0) {
-        this.vel.y -= this.acceleration;
-      }
-      if (this.vel.y < 0) {
-        this.vel.y += this.acceleration;
-      }
-    }
-
-    if (! keyIsDown(65) && ! keyIsDown(68)) {
-      if (this.vel.x > 0) {
-        this.vel.x -= this.acceleration;
-      }
-      if (this.vel.x < 0) {
-        this.vel.x += this.acceleration;
-      }
-    }
-  }
 
   checkRoom() {
     
@@ -279,6 +287,7 @@ class Player {
 class Longsword {
   constructor() {
     this.radius = 0.4;
+    this.pos = createVector(0, 0)
     this.swingX;
     this.swingY;
     this.swinging = false;
@@ -287,7 +296,7 @@ class Longsword {
   display() {
     noFill();
     if (this.swinging) {
-      circle(this.swingX*CELLSIZE, this.swingY*CELLSIZE, this.radius*2*CELLSIZE);
+      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.radius*2*CELLSIZE);
     }
   }
 
@@ -295,23 +304,23 @@ class Longsword {
 
     console.log("SWING!");
     if (direction === "north") {
-      this.swingX = player.pos.x;
-      this.swingY = player.pos.y - player.size;
+      this.pos.x = player.pos.x;
+      this.pos.y = player.pos.y - player.size;
     }
 
     if (direction === "south") {
-      this.swingX = player.pos.x;
-      this.swingY = player.pos.y + player.size;
+      this.pos.x = player.pos.x;
+      this.pos.y = player.pos.y + player.size;
     }
 
     if (direction === "east") {
-      this.swingX = player.pos.x + player.size;
-      this.swingY = player.pos.y;
+      this.pos.x = player.pos.x + player.size;
+      this.pos.y = player.pos.y;
     }
 
     if (direction === "west") {
-      this.swingX = player.pos.x - player.size;
-      this.swingY = player.pos.y;
+      this.pos.x = player.pos.x - player.size;
+      this.pos.y = player.pos.y;
     }
 
     this.swinging = true;
@@ -324,15 +333,14 @@ class Longsword {
 
 class Enemy {
   constructor(x, y, room) {
-    this.x = x;
-    this.y = y;
+    this.pos = createVector(x, y)
     this.room = room;
     this.size = 0.75;
   }
 
   display() {
     fill("black");
-    circle(this.x*CELLSIZE, this.y*CELLSIZE, this.size*CELLSIZE);
+    circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
   }
 }
 
@@ -364,7 +372,6 @@ function draw() {
 
   playerInput();
 
-  player.stopMoving();
   player.updateMovement();
 
   player.checkRoom();
@@ -448,21 +455,8 @@ function mousePressed() {
 
 function playerInput() {
 
-  if (keyIsDown(87) && player.vel.y > -player.topSpeed) { //w
-    player.vel.y -= player.acceleration;
-  }
-  if (keyIsDown(83) && player.vel.y < player.topSpeed) { //s
-    player.vel.y += player.acceleration;
-  }
-  
-  if (keyIsDown(65) && player.vel.x > -player.topSpeed) { //d
-    player.vel.x -= player.acceleration;
-  }
-  if (keyIsDown(68) && player.vel.x < player.topSpeed) { //a
-    player.vel.x += player.acceleration;
-  }
-  
-  
+  player.input.x = int(keyIsDown(68)) - int(keyIsDown(65))
+  player.input.y = int(keyIsDown(83)) - int(keyIsDown(87)) 
 
   if (! player.weapon.swinging) {
 
