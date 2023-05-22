@@ -135,7 +135,7 @@ class Room {
       }
       for (let i = 0; i < enemyCount; i++) {
         let chosenCell = random(tempCells);
-        let enemy = new Enemy(chosenCell.x + 0.5, chosenCell.y + 0.5, this);
+        let enemy = new Enemy(chosenCell.x + 0.5, chosenCell.y + 0.5);
         this.enemies.push(enemy);
       }
     }
@@ -194,9 +194,9 @@ class Player {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.input = createVector(0, 0);
-    this.acceleration = 0.005;
+    this.acceleration = 0.008;
     this.friction = 0.01;
-    this.topSpeed = 0.06;
+    this.topSpeed = 0.07;
     this.hp = 10;
     this.size = 0.5;
     this.currentRoom;
@@ -286,55 +286,62 @@ class Player {
 
 class Longsword {
   constructor() {
-    this.radius = 0.4;
-    this.pos = createVector(0, 0)
-    this.swingX;
-    this.swingY;
+    this.size = 0.8;
+    this.reach = 0.3;
+    this.speed = 500;
+    this.knockback = 0.08;
+    this.pos = createVector(0, 0);
+    this.input = createVector(0,0);
     this.swinging = false;
   }
 
   display() {
     noFill();
     if (this.swinging) {
-      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.radius*2*CELLSIZE);
+      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+    }
+    else {
+      line(player.pos.x*CELLSIZE, player.pos.y*CELLSIZE, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
     }
   }
 
-  attack(direction) {
+  updateDirection() {
 
-    console.log("SWING!");
-    if (direction === "north") {
-      this.pos.x = player.pos.x;
-      this.pos.y = player.pos.y - player.size;
-    }
+    player.weapon.input.x = (mouseX - width/2);
+    player.weapon.input.y = (mouseY - height/2);
 
-    if (direction === "south") {
-      this.pos.x = player.pos.x;
-      this.pos.y = player.pos.y + player.size;
-    }
+    this.input.normalize();
+    this.input.mult(this.reach);
 
-    if (direction === "east") {
-      this.pos.x = player.pos.x + player.size;
-      this.pos.y = player.pos.y;
-    }
+    this.pos.x = player.pos.x + this.input.x;
+    this.pos.y = player.pos.y + this.input.y;
+  }
 
-    if (direction === "west") {
-      this.pos.x = player.pos.x - player.size;
-      this.pos.y = player.pos.y;
+  attack() {
+
+    for (let someEnemy of player.currentRoom.enemies) {
+      if (this.pos.dist(someEnemy.pos) < this.size/2 + someEnemy.size/2) {
+        someEnemy.color = "red"
+        someEnemy.hit(this.pos, this.knockback);
+      }
     }
 
     this.swinging = true;
     setTimeout(() => {
       this.swinging = false;
-    }, 600);
+    }, this.speed);
   }
 }
 
 
 class Enemy {
-  constructor(x, y, room) {
-    this.pos = createVector(x, y)
-    this.room = room;
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.vel = createVector(0, 0);
+    this.direction = createVector(0, 0);
+    this.acceleration = 0.002;
+    this.topSpeed = 0.04;
+    this.hp = 10;
     this.size = 0.75;
   }
 
@@ -342,12 +349,31 @@ class Enemy {
     fill("black");
     circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
   }
+
+  hit(weaponPos, strength) {
+
+  }
+
+  updateMovement() {
+    
+    this.direction.x = player.pos.x - this.pos.x;
+    this.direction.y = player.pos.y - this.pos.y;
+    this.direction.normalize();
+    round(this.direction.x);
+    round(this.direction.y);
+
+    this.vel.x += this.acceleration*this.direction.x;
+    this.vel.y += this.acceleration*this.direction.y;
+    this.vel.limit(this.topSpeed);
+
+    this.pos.add(this.vel);
+  }
 }
 
 
 const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
-const ROOMQUANTITY = 15;
+const ROOMQUANTITY = 10;
 const CELLSIZE = 60;
 const DOORSIZE = 1/5;
 
@@ -369,15 +395,18 @@ function setup() {
 function draw() {
 
   background(220);
+  translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
 
   playerInput();
 
   player.updateMovement();
-
   player.checkRoom();
   player.checkWallCollisions();
+  player.weapon.updateDirection();
 
-  translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
+  for (let someEnemy of player.currentRoom.enemies) {
+    someEnemy.updateMovement();
+  }
   display();
 }
 
@@ -458,19 +487,7 @@ function playerInput() {
   player.input.x = int(keyIsDown(68)) - int(keyIsDown(65))
   player.input.y = int(keyIsDown(83)) - int(keyIsDown(87)) 
 
-  if (! player.weapon.swinging) {
-
-    if (keyIsDown(38)) { //up
-      player.weapon.attack("north");
-    }
-    else if (keyIsDown(40)) { //down
-      player.weapon.attack("south");
-    }
-    else if (keyIsDown(37)) { //left
-      player.weapon.attack("west");
-    }
-    else if (keyIsDown(39)) { //right
-      player.weapon.attack("east");
-    }
+  if (mouseIsPressed && ! player.weapon.swinging) {
+    player.weapon.attack();
   }
 }
