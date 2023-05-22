@@ -198,11 +198,13 @@ class Player {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.input = createVector(0, 0);
+    this.knockbackDirection = createVector(0, 0);
+    this.knockbackInput = 0;
     this.acceleration = 0.008;
-    this.friction = 0.01;
     this.topSpeed = 0.07;
-    this.hp = 10;
+    this.hp = 50;
     this.size = 0.5;
+    this.immunityFrames = 0;
     this.currentRoom;
     this.weapon;
   }
@@ -215,10 +217,16 @@ class Player {
 
   updateMovement() {
 
-    if (this.input.x === 0 && this.input.y === 0) {
+    if (this.knockbackInput > 0) {
+      this.vel.x -= this.knockbackInput*this.knockbackDirection.x;
+      this.vel.y -= this.knockbackInput*this.knockbackDirection.y;
+      this.knockbackInput -= this.acceleration;
+    }
 
-      if (this.vel.mag() >= this.friction) {
-        this.vel.setMag(this.vel.mag() - this.friction);
+    else if (this.input.x === 0 && this.input.y === 0) {
+
+      if (this.vel.mag() >= this.acceleration) {
+        this.vel.setMag(this.vel.mag() - this.acceleration);
       }
       else {
         this.vel.set(0);
@@ -232,6 +240,7 @@ class Player {
     }
 
     this.pos.add(this.vel);
+    this.immunityFrames --;
   }
 
 
@@ -272,16 +281,37 @@ class Player {
       }
     }
   }
+
+  checkEnemyCollisions() {
+
+    for (let someEnemy of this.currentRoom.enemies) {
+      if (! someEnemy.dead && this.pos.dist(someEnemy.pos) < this.size/2 + someEnemy.size/2) {
+
+        this.knockbackDirection.x = someEnemy.pos.x - this.pos.x;
+        this.knockbackDirection.y = someEnemy.pos.y - this.pos.y;
+        this.knockbackDirection.normalize();
+        round(this.knockbackDirection.x);
+        round(this.knockbackDirection.y);
+    
+        if (this.immunityFrames <= 0) {
+          this.knockbackInput = someEnemy.knockbackOutput;
+          this.hp -= someEnemy.damage;
+          this.immunityFrames = 10;
+        }
+      }
+    }
+  }
 }
 
 
 class Longsword {
   constructor() {
-    this.size = 1;
-    this.reach = 0.5;
+    this.size = 0.8;
+    this.reach = 0.4;
     this.damage = 4;
     this.speed = 200;
-    this.knockback = 0.022;
+    this.knockbackOutput = 0.03;
+    this.angle = 0;
     this.pos = createVector(0, 0);
     this.input = createVector(0,0);
     this.swinging = false;
@@ -295,16 +325,17 @@ class Longsword {
     else {
       line(player.pos.x*CELLSIZE, player.pos.y*CELLSIZE, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
     }
+    
   }
 
   updateDirection() {
 
-    player.weapon.input.x = (mouseX - width/2);
-    player.weapon.input.y = (mouseY - height/2);
-
+    this.input.x = (mouseX - width/2);
+    this.input.y = (mouseY - height/2);
     this.input.normalize();
-    this.input.mult(this.reach);
+    this.angle = atan(this.input.y/this.input.x);
 
+    this.input.mult(this.reach);
     this.pos.x = player.pos.x + this.input.x;
     this.pos.y = player.pos.y + this.input.y;
   }
@@ -313,7 +344,7 @@ class Longsword {
 
     for (let someEnemy of player.currentRoom.enemies) {
       if (this.pos.dist(someEnemy.pos) < this.size/2 + someEnemy.size/2) {
-        someEnemy.hit(this.pos, this.knockback, this.damage);
+        someEnemy.hit(this.pos, this.knockbackOutput, this.damage);
       }
     }
 
@@ -330,9 +361,11 @@ class Enemy {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
-    this.acceleration = 0.002;
-    this.knockbackStrength  = 0;
+    this.acceleration = 0.004;
+    this.knockbackInput = 0;
     this.topSpeed = 0.05;
+    this.knockbackOutput = 0.04;
+    this.damage = 1;
     this.hp = 10;
     this.size = 0.75;
     this.dead = false;
@@ -352,7 +385,7 @@ class Enemy {
     round(this.direction.x);
     round(this.direction.y);
 
-    this.knockbackStrength = strength;
+    this.knockbackInput = strength;
     this.hp -= damage;
 
     if (this.hp <= 0) {
@@ -363,7 +396,7 @@ class Enemy {
 
   updateMovement() {
     
-    if (this.knockbackStrength < 0 && ! this.dead) {
+    if (this.knockbackInput < 0 && ! this.dead) {
 
       this.direction.x = player.pos.x - this.pos.x;
       this.direction.y = player.pos.y - this.pos.y;
@@ -376,7 +409,7 @@ class Enemy {
       this.vel.limit(this.topSpeed);
     }
 
-    else if (this.knockbackStrength < 0) {
+    else if (this.knockbackInput < 0) {
       if (this.vel.mag() >= this.acceleration) {
         this.vel.setMag(this.vel.mag() - this.acceleration);
       }
@@ -386,9 +419,9 @@ class Enemy {
     }
 
     else {
-      this.vel.x -= this.knockbackStrength*this.direction.x;
-      this.vel.y -= this.knockbackStrength*this.direction.y;
-      this.knockbackStrength -= this.acceleration;
+      this.vel.x -= this.knockbackInput*this.direction.x;
+      this.vel.y -= this.knockbackInput*this.direction.y;
+      this.knockbackInput -= this.acceleration;
     }
 
     this.pos.add(this.vel);
@@ -412,7 +445,18 @@ class Enemy {
       this.pos.y = player.currentRoom.y + player.currentRoom.height - this.size / 2;
       this.vel.y *= -1
     }
-    
+  }
+
+  checkEnemyCollisions() {
+
+    for (let someEnemy of player.currentRoom.enemies) {
+      if (someEnemy === this) {
+        return false;
+      }
+      else if (this.pos.dist(someEnemy.pos) < this.size/2 + someEnemy.size/2) {
+        return true;
+      }
+    }
   }
 }
 
@@ -427,13 +471,22 @@ let rooms = [];
 let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
+let totalFrames = 0;
+let frames = 0;
 
+let swingImage;
+
+
+function preload() {
+  swingImage = loadImage("sword_swing.png");
+}
 
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
 
   createFirstRoom();
+  setInterval(showFrames, 1000);
   generateRooms();
 }
 
@@ -447,6 +500,7 @@ function draw() {
 
   player.updateMovement();
   player.checkRoom();
+  player.checkEnemyCollisions();
   player.checkWallCollisions();
   player.weapon.updateDirection();
 
@@ -481,6 +535,25 @@ function display() {
 
   player.display();
   player.weapon.display();
+
+  push();
+  //translate(player.pos.x*CELLSIZE - width/2, player.pos.y*CELLSIZE - height/2);
+  fill("black");
+
+  textSize(30);
+  text("FPS: " + frames, 20, 100)
+
+  textSize(50);
+  text("Health: " + player.hp, 20, 50)
+  pop();
+}
+
+
+function showFrames() {
+
+  frames = frameCount;
+  frames -= totalFrames;
+  totalFrames = frameCount;
 }
 
 
