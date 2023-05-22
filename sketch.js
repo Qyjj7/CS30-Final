@@ -8,9 +8,13 @@ class Room {
     this.cells = [];
     this.doors = [];
     this.enemies = [];
+    this.cleared = false;
   }
 
-
+  display() {
+    fill("grey");
+    rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE)
+  }
   createNeighbor(x, y, w, h) {
 
     let newRoom = new Room(x, y, w, h);
@@ -251,6 +255,7 @@ class Player {
       if (this.pos.x >= someRoom.x && this.pos.x <= someRoom.x+someRoom.width) {
         if (this.pos.y >= someRoom.y && this.pos.y <= someRoom.y+someRoom.height) {
           this.currentRoom = someRoom;
+          this.currentRoom.cleared = true;
         }
       }
     }
@@ -259,14 +264,14 @@ class Player {
 
   checkWallCollisions() {
 
-    let walls = true;
+    let wallHere = true;
     for (let someDoor of this.currentRoom.doors) {
       if (someDoor.playerCollision()) {
-        walls = false;
+        wallHere = false;
       }
     }
 
-    if (walls) {
+    if (wallHere) {
       if (this.pos.x <= this.currentRoom.x + this.size / 2) {
         this.pos.x = this.currentRoom.x + this.size / 2;
       }
@@ -286,10 +291,11 @@ class Player {
 
 class Longsword {
   constructor() {
-    this.size = 0.8;
-    this.reach = 0.3;
-    this.speed = 500;
-    this.knockback = 0.08;
+    this.size = 1;
+    this.reach = 0.5;
+    this.damage = 4;
+    this.speed = 200;
+    this.knockback = 0.022;
     this.pos = createVector(0, 0);
     this.input = createVector(0,0);
     this.swinging = false;
@@ -321,8 +327,7 @@ class Longsword {
 
     for (let someEnemy of player.currentRoom.enemies) {
       if (this.pos.dist(someEnemy.pos) < this.size/2 + someEnemy.size/2) {
-        someEnemy.color = "red"
-        someEnemy.hit(this.pos, this.knockback);
+        someEnemy.hit(this.pos, this.knockback, this.damage);
       }
     }
 
@@ -340,33 +345,79 @@ class Enemy {
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
     this.acceleration = 0.002;
-    this.topSpeed = 0.04;
+    this.knockbackStrength  = 0;
+    this.topSpeed = 0.05;
     this.hp = 10;
     this.size = 0.75;
+    this.dead = false;
+    this.color = "black";
   }
 
   display() {
-    fill("black");
+    fill(this.color);
     circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
   }
 
-  hit(weaponPos, strength) {
+  hit(weaponPos, strength, damage) {
 
-  }
-
-  updateMovement() {
-    
-    this.direction.x = player.pos.x - this.pos.x;
-    this.direction.y = player.pos.y - this.pos.y;
+    this.direction.x = weaponPos.x - this.pos.x;
+    this.direction.y = weaponPos.y - this.pos.y;
     this.direction.normalize();
     round(this.direction.x);
     round(this.direction.y);
 
-    this.vel.x += this.acceleration*this.direction.x;
-    this.vel.y += this.acceleration*this.direction.y;
-    this.vel.limit(this.topSpeed);
+    this.knockbackStrength = strength;
+    this.hp -= damage;
+
+    if (this.hp <= 0) {
+      this.dead = true;
+      this.color = "red";
+    }
+  }
+
+  updateMovement() {
+    
+    if (this.knockbackStrength < 0 && ! this.dead) {
+
+      this.direction.x = player.pos.x - this.pos.x;
+      this.direction.y = player.pos.y - this.pos.y;
+      this.direction.normalize();
+      round(this.direction.x);
+      round(this.direction.y);
+  
+      this.vel.x += this.acceleration*this.direction.x;
+      this.vel.y += this.acceleration*this.direction.y;
+      this.vel.limit(this.topSpeed);
+    }
+
+    else if (this.knockbackStrength < 0) {
+        this.vel.set(0);
+    }
+
+    else {
+      this.vel.x -= this.knockbackStrength*this.direction.x;
+      this.vel.y -= this.knockbackStrength*this.direction.y;
+      this.knockbackStrength -= this.acceleration;
+    }
 
     this.pos.add(this.vel);
+  }
+
+  checkWallCollisions() {
+
+    if (this.pos.x <= player.currentRoom.x + this.size / 2) {
+      this.pos.x = player.currentRoom.x + this.size / 2;
+    }
+    if (this.pos.x >= player.currentRoom.x + player.currentRoom.width - this.size / 2) {
+      this.pos.x = player.currentRoom.x + player.currentRoom.width - this.size / 2;
+    }
+    if (this.pos.y <= player.currentRoom.y + this.size / 2) {
+      this.pos.y = player.currentRoom.y + this.size / 2;
+    }
+    if (this.pos.y >= player.currentRoom.y + player.currentRoom.height - this.size / 2) {
+      this.pos.y = player.currentRoom.y + player.currentRoom.height - this.size / 2;
+    }
+    
   }
 }
 
@@ -406,12 +457,22 @@ function draw() {
 
   for (let someEnemy of player.currentRoom.enemies) {
     someEnemy.updateMovement();
+    someEnemy.checkWallCollisions();
   }
   display();
 }
 
 
 function display() {
+
+  for (let someRoom of rooms) {
+    if (someRoom.cleared) {
+      someRoom.display();
+      for (let someDoor of someRoom.doors) {
+        someDoor.display();
+      }
+    }
+  }
 
   for (let someCell of player.currentRoom.cells) {
     someCell.display();
