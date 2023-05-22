@@ -218,22 +218,8 @@ class Player {
     if (this.input.x === 0 && this.input.y === 0) {
 
       if (this.vel.mag() >= this.friction) {
-  
-        if (this.vel.y > 0) {
-          this.vel.y -= this.friction;
-        }
-        else if (this.vel.y < 0) {
-          this.vel.y += this.friction;
-        }
-      
-        if (this.vel.x > 0) {
-          this.vel.x -= this.friction;
-        }
-        else if (this.vel.x < 0) {
-          this.vel.x += this.friction;
-        }
+        this.vel.setMag(this.vel.mag() - this.friction);
       }
-
       else {
         this.vel.set(0);
       }
@@ -391,7 +377,12 @@ class Enemy {
     }
 
     else if (this.knockbackStrength < 0) {
+      if (this.vel.mag() >= this.acceleration) {
+        this.vel.setMag(this.vel.mag() - this.acceleration);
+      }
+      else {
         this.vel.set(0);
+      }
     }
 
     else {
@@ -407,15 +398,19 @@ class Enemy {
 
     if (this.pos.x <= player.currentRoom.x + this.size / 2) {
       this.pos.x = player.currentRoom.x + this.size / 2;
+      this.vel.x *= -1
     }
     if (this.pos.x >= player.currentRoom.x + player.currentRoom.width - this.size / 2) {
       this.pos.x = player.currentRoom.x + player.currentRoom.width - this.size / 2;
+      this.vel.x *= -1
     }
     if (this.pos.y <= player.currentRoom.y + this.size / 2) {
       this.pos.y = player.currentRoom.y + this.size / 2;
+      this.vel.y *= -1
     }
     if (this.pos.y >= player.currentRoom.y + player.currentRoom.height - this.size / 2) {
       this.pos.y = player.currentRoom.y + player.currentRoom.height - this.size / 2;
+      this.vel.y *= -1
     }
     
   }
