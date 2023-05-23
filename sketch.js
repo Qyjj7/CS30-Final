@@ -145,7 +145,7 @@ class Room {
         let acc = 0.004;
         let topSpeed = 0.05;
         let hp = 10;
-        let size = 0.5;
+        let size = 0.8;
         let room = this;
         let enemy = new Entity(x, y, acc, topSpeed, hp, size, room);
         enemy.weapon = new Longsword(enemy);
@@ -230,8 +230,19 @@ class Entity {
     this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
     this.direction.normalize();
     
-    if (this.dead) {
+    if (this.dead || this.weapon.winding) {
       this.direction.set(0, 0);
+    }
+  }
+
+  checkRange() {
+    if (! this.dead && this.pos.dist(player.pos) < this.weapon.maxRange + player.size/2) {
+
+      this.weapon.winding = true;
+      setTimeout(() => {
+        this.weapon.attack();
+        this.weapon.winding = false;
+      }, this.weapon.windTime);
     }
   }
   
@@ -263,8 +274,11 @@ class Entity {
     for (let someRoom of rooms) {
       if (this.pos.x >= someRoom.x && this.pos.x <= someRoom.x+someRoom.width) {
         if (this.pos.y >= someRoom.y && this.pos.y <= someRoom.y+someRoom.height) {
-          this.currentRoom = someRoom;
-          this.currentRoom.cleared = true;
+          if (this.currentRoom !== someRoom) {
+            this.immunityFrames = 15;
+            this.currentRoom = someRoom;
+            this.currentRoom.cleared = true;
+          }
         }
       }
     }
@@ -334,15 +348,17 @@ class Longsword {
     this.damage = 4;
     this.speed = 200;
     this.knockback = 0.15;
+    this.windTime = 250;
     this.pos = createVector(0, 0);
     this.direction = createVector(0,0);
     this.swinging = false;
+    this.winding = false;
     this.owner = owner;
   }
 
   display() {
     noFill();
-    if (this.swinging) {
+    if (this.swinging || this.winding) {
       circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
     }
     else {
@@ -355,21 +371,14 @@ class Longsword {
     if (this === player.weapon) {
       this.direction.set(mouseX - width/2, mouseY - height/2);
     }
-    else {
-      this.direction.set(player.pos.x, player.pos.y);
+    else if (! this.winding) {
+      this.direction.set(player.pos.x - this.owner.pos.x, player.pos.y - this.owner.pos.y);
     }
 
     this.direction.normalize();
     this.direction.mult(this.reach);
     this.pos.set(this.owner.pos.x + this.direction.x, this.owner.pos.y + this.direction.y);
   }
-
-  checkRange() {
-    if (! this.owner.dead && this.owner.pos.dist(player.pos) < this.maxRange + player.size/2) {
-      this.attack();
-    }
-  }
-
 
   attack() {
 
@@ -444,7 +453,7 @@ function draw() {
     someEntity.updateMovement();
     someEntity.checkWallCollisions();
     someEntity.weapon.updateDirection();
-    someEntity.weapon.checkRange();
+    someEntity.checkRange();
   }
   display();
 }
@@ -469,13 +478,14 @@ function display() {
   }
   for (let someEnemy of player.currentRoom.entities) {
     someEnemy.display();
+    someEnemy.weapon.display();
   }
 
   player.display();
   player.weapon.display();
 
   push();
-  //translate(player.pos.x*CELLSIZE - width/2, player.pos.y*CELLSIZE - height/2);
+  translate(player.pos.x*CELLSIZE - width/2, player.pos.y*CELLSIZE - height/2);
   fill("black");
 
   textSize(30);
