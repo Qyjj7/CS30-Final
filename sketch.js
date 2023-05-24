@@ -258,7 +258,7 @@ class Entity {
       }
     }
 
-    else {
+    else if (!this.knocked) {
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
       this.vel = this.vel.limit(this.topSpeed);
@@ -334,7 +334,7 @@ class Entity {
 
       setTimeout(() => {
         this.knocked = false;
-      }, 400);
+      }, weapon.knockbackTime);
     }
   }
 }
@@ -348,6 +348,7 @@ class Longsword {
     this.damage = 4;
     this.speed = 200;
     this.knockback = 0.15;
+    this.knockbackTime = 300;
     this.windTime = 250;
     this.pos = createVector(0, 0);
     this.direction = createVector(0,0);
@@ -437,9 +438,8 @@ function setup() {
 
 
 function draw() {
-
+  
   background(220);
-  translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
 
   playerInput();
 
@@ -455,12 +455,16 @@ function draw() {
     someEntity.weapon.updateDirection();
     someEntity.checkRange();
   }
+  
+  push();
+  translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
   display();
+  pop();
+  displayInterface();
 }
 
 
 function display() {
-
   for (let someRoom of rooms) {
     if (someRoom.cleared) {
       someRoom.display();
@@ -483,9 +487,9 @@ function display() {
 
   player.display();
   player.weapon.display();
+}
 
-  push();
-  translate(player.pos.x*CELLSIZE - width/2, player.pos.y*CELLSIZE - height/2);
+function displayInterface() {
   fill("black");
 
   textSize(30);
@@ -493,7 +497,6 @@ function display() {
 
   textSize(50);
   text("Health: " + player.hp, 20, 50);
-  pop();
 }
 
 
