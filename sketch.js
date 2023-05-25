@@ -139,22 +139,42 @@ class Room {
       }
       for (let i = 0; i < enemyCount; i++) {
         let chosenCell = random(tempCells);
-
-        let x = chosenCell.x + 0.5;
-        let y = chosenCell.y + 0.5;
-        let acc = 0.004;
-        let topSpeed = 0.05;
-        let hp = 10;
-        let size = 0.8;
-        let room = this;
-        let enemy = new Entity(x, y, acc, topSpeed, hp, size, room);
-        enemy.weapon = new Longsword(enemy);
-        this.entities.push(enemy);
+        this.determineEnemyStats(chosenCell);
       }
     }
   }
-}
 
+  determineEnemyStats(cell) {
+
+    let number = random(0, 100);
+    let enemyType;
+    if (number >= 0 && number < 25) {
+      enemyType = "ranged";
+    }
+    else {
+      enemyType = "melee";
+    }
+
+    let xPos = cell.x + 0.5;
+    let yPos = cell.y + 0.5;
+    let acc = 0.004;
+    let topSpeed = 0.05;
+    let hp = 10;
+    let size = 0.8;
+    let room = this;
+    let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
+
+    let diameter = 0.8;
+    let reach = 0.4;
+    let dmg = 1;
+    let speed = 200;
+    let kb = 0.15;
+    let owner = enemy;
+    enemy.weapon = new Weapon(diameter, reach, dmg, speed, kb, owner);
+
+    this.entities.push(enemy);
+  }
+}
 
 class Cell {
   constructor(x, y) {
@@ -173,7 +193,6 @@ class Cell {
     this.color = color;
   }
 }
-
 
 class Door {
   constructor(x, y, w, h, orientation) {
@@ -201,7 +220,6 @@ class Door {
   }
 }
 
-
 class Entity {
   constructor(x, y, acc, topSpeed, hp, size, room) {
     this.pos = createVector(x, y);
@@ -209,14 +227,13 @@ class Entity {
     this.topSpeed = topSpeed;
     this.hp = hp;
     this.size = size;
-
+    this.currentRoom = room;
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
     this.immunityFrames = 0;
     this.color = "black";
     this.knocked = false;
     this.dead = false;
-    this.currentRoom = room;
     this.weapon;
   }
 
@@ -339,22 +356,21 @@ class Entity {
   }
 }
 
-
-class Longsword {
-  constructor(owner) {
-    this.size = 0.8;
-    this.reach = 0.4;
-    this.maxRange = this.size/2 + this.reach;
-    this.damage = 4;
-    this.speed = 200;
-    this.knockback = 0.15;
+class Weapon {
+  constructor(diameter, reach, dmg, speed, kb, owner) {
+    this.size = diameter;
+    this.reach = reach;
+    this.maxRange = diameter/2 + reach;
+    this.damage = dmg;
+    this.speed = speed;
+    this.knockback = kb;
+    this.owner = owner;
     this.knockbackTime = 300;
     this.windTime = 250;
     this.pos = createVector(0, 0);
     this.direction = createVector(0,0);
     this.swinging = false;
     this.winding = false;
-    this.owner = owner;
   }
 
   display() {
@@ -501,7 +517,6 @@ function displayInterface() {
 
 
 function showFrames() {
-
   theseFrames = frameCount;
   theseFrames -= totalFrames;
   totalFrames = frameCount;
@@ -510,21 +525,27 @@ function showFrames() {
 
 function createFirstRoom() {
 
-  let h = MINROOMSIZE;
-  let w = MINROOMSIZE;
-  let x = floor(h/2) + 0.5;
-  let y = floor(w/2) + 0.5;
+  let someRoom = new Room(0, 0, MINROOMSIZE, MINROOMSIZE);
+  rooms.push(someRoom);
+  someRoom.addCells();
+
+  let x = floor(MINROOMSIZE/2) + 0.5;
+  let y = floor(MINROOMSIZE/2) + 0.5;
   let acc = 0.008;
   let topSpeed = 0.07;
   let hp = 25;
   let size = 0.5;
 
-  let someRoom = new Room(0, 0, w, h);
-  rooms.push(someRoom);
-  someRoom.addCells();
-
   player = new Entity(x, y, acc, topSpeed, hp, size, someRoom);
-  player.weapon = new Longsword(player);
+
+  let diameter = 0.8;
+  let reach = 0.4;
+  let dmg = 4;
+  let speed = 200;
+  let kb = 0.15;
+  let owner = player;
+
+  player.weapon = new Weapon(diameter, reach, dmg, speed, kb, owner);
 }
 
 
