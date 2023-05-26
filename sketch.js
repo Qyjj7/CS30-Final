@@ -15,6 +15,7 @@ class Room {
     fill("grey");
     rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
   }
+
   createNeighbor(x, y, w, h) {
 
     let newRoom = new Room(x, y, w, h);
@@ -40,7 +41,6 @@ class Room {
     return newRoom;
   }
 
-
   positionValid() {
 
     let thisRoom = [];
@@ -62,7 +62,6 @@ class Room {
     }
     return true;
   }
-
 
   spawnDoors() {
 
@@ -112,7 +111,6 @@ class Room {
     }
   }
 
-
   addCells() {
 
     for (let x = 0; x < this.width; x++) {
@@ -124,7 +122,6 @@ class Room {
       }
     }
   }
-
 
   populate() {
 
@@ -265,6 +262,21 @@ class Entity {
     circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
   }
 
+  handleStuff() {
+
+    if (this === player) {
+      this.updateMovement();
+      this.checkRoom();
+      this.checkWallCollisions();
+      this.weapon.handleStuff();
+    }
+    else {
+      this.seekPlayer();
+      this.updateMovement();
+      this.checkWallCollisions();
+      this.weapon.handleStuff();
+    }
+  }
 
   seekPlayer() {
     this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
@@ -272,16 +284,6 @@ class Entity {
     
     if (this.dead || this.weapon.winding || this.weapon.withinRange()) {
       this.direction.set(0, 0);
-    }
-  }
-
-  checkRange() {
-    if (! this.dead && this.pos.dist(player.pos) < this.weapon.maxRange + player.size/2) {
-      this.weapon.winding = true;
-      setTimeout(() => {
-        this.weapon.attack();
-        this.weapon.winding = false;
-      }, this.weapon.windTime);
     }
   }
   
@@ -562,6 +564,7 @@ let rooms = [];
 let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
+let paused = false;
 let totalFrames = 0;
 let theseFrames = 0;
 
@@ -587,17 +590,9 @@ function draw() {
   background(220);
 
   playerInput();
-
-  player.updateMovement();
-  player.checkRoom();
-  player.checkWallCollisions();
-  player.weapon.updateDirection();
-
+  player.handleStuff();
   for (let someEntity of player.currentRoom.entities) {
-    someEntity.seekPlayer();
-    someEntity.updateMovement();
-    someEntity.checkWallCollisions();
-    someEntity.weapon.handleStuff();
+    someEntity.handleStuff();
   }
   
   push();
@@ -637,10 +632,16 @@ function displayInterface() {
   fill("black");
 
   textSize(30);
+  textAlign(LEFT);
   text("FPS: " + theseFrames, 20, 100);
 
   textSize(50);
+  textAlign(LEFT);
   text("Health: " + player.hp, 20, 50);
+
+  textSize(20);
+  textAlign(RIGHT);
+  text("Press Space to Pause Game", width-20, 25);
 }
 
 
@@ -724,5 +725,8 @@ function playerInput() {
 
   if (mouseIsPressed) {
     player.weapon.attack();
+  }
+  if (keyIsPressed && key === 32) {
+    paused = -paused;
   }
 }
