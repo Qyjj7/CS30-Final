@@ -86,11 +86,11 @@ class Room {
           let chosenDoor = random(options);
           chosenDoor[0].object = "door";
           chosenDoor[1].object = "door";
-
           let w;
           let h; 
           let x;
           let y;
+          
           if (chosenDoor[2] === "vertical") {
             w = 1;
             h = DOORSIZE;
@@ -155,24 +155,47 @@ class Room {
       enemyType = "melee";
     }
 
-    let xPos = cell.x + 0.5;
-    let yPos = cell.y + 0.5;
-    let acc = 0.004;
-    let topSpeed = 0.05;
-    let hp = 10;
-    let size = 0.8;
-    let room = this;
-    let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
+    if (enemyType === "melee") {
 
-    let diameter = 0.8;
-    let reach = 0.4;
-    let dmg = 1;
-    let speed = 200;
-    let kb = 0.15;
-    let owner = enemy;
-    enemy.weapon = new Weapon(diameter, reach, dmg, speed, kb, owner);
+      let xPos = cell.x + 0.5;
+      let yPos = cell.y + 0.5;
+      let acc = 0.004;
+      let topSpeed = 0.05;
+      let hp = 10;
+      let size = 0.8;
+      let room = this;
+      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
+      this.entities.push(enemy);
 
-    this.entities.push(enemy);
+      let diameter = 0.8;
+      let reach = 0.4;
+      let dmg = 1;
+      let speed = 200;
+      let kb = 0.15;
+      let owner = enemy;
+      enemy.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner);
+    }
+
+    else if (enemyType === "ranged") {
+
+      let xPos = cell.x + 0.5;
+      let yPos = cell.y + 0.5;
+      let acc = 0.004;
+      let topSpeed = 0.05;
+      let hp = 4;
+      let size = 0.5;
+      let room = this;
+      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
+      this.entities.push(enemy);
+
+      let diameter = 0.6;
+      let reach = 5;
+      let dmg = 3;
+      let speed = 0.06;
+      let kb = 0.15;
+      let owner = enemy;
+      enemy.weapon = new Wand(diameter, reach, dmg, speed, kb, owner);
+    }
   }
 }
 
@@ -247,14 +270,13 @@ class Entity {
     this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
     this.direction.normalize();
     
-    if (this.dead || this.weapon.winding) {
+    if (this.dead || this.weapon.winding || this.weapon.withinRange()) {
       this.direction.set(0, 0);
     }
   }
 
   checkRange() {
     if (! this.dead && this.pos.dist(player.pos) < this.weapon.maxRange + player.size/2) {
-
       this.weapon.winding = true;
       setTimeout(() => {
         this.weapon.attack();
@@ -356,8 +378,9 @@ class Entity {
   }
 }
 
-class Weapon {
+class Longsword {
   constructor(diameter, reach, dmg, speed, kb, owner) {
+    this.name = "longsword";
     this.size = diameter;
     this.reach = reach;
     this.maxRange = diameter/2 + reach;
@@ -381,6 +404,23 @@ class Weapon {
     else {
       line(this.owner.pos.x*CELLSIZE, this.owner.pos.y*CELLSIZE, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
     }
+  }
+
+  handleStuff() {
+
+    this.updateDirection();
+    if (this.owner !== player && ! this.owner.dead && this.withinRange()) {
+      this.winding = true;
+
+      setTimeout(() => {
+        this.winding = false;
+        this.attack();
+      }, this.windTime);
+    }
+  }
+
+  withinRange() {
+    return ! this.dead && this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
   }
 
   updateDirection() {
@@ -418,6 +458,95 @@ class Weapon {
       setTimeout(() => {
         this.swinging = false;
       }, this.speed);
+    }
+  }
+}
+
+class Wand {
+  constructor(diameter, reach, dmg, speed, kb, owner) {
+    this.name = "wand";
+    this.size = diameter;
+    this.maxRange = reach;
+    this.damage = dmg;
+    this.speed = speed;
+    this.knockback = kb;
+    this.owner = owner;
+    this.knockbackTime = 300;
+    this.windTime = 2000;
+    this.pos = createVector(owner.pos.x, owner.pos.y);
+    this.direction = createVector(0,0);
+    this.swinging = false;
+    this.winding = false;
+  }
+
+  display() {
+    noFill();
+    if (this.swinging || this.winding) {
+      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+    }
+  }
+
+  handleStuff() {
+
+    if (this.withinRange() && ! this.owner.dead && ! this.swinging && ! this.winding) {
+
+      this.updateDirection();
+      this.swinging = true;
+      
+    }
+    this.checkCollisions();
+    this.updateMovement();
+  }
+
+  withinRange() {
+    return ! this.dead && this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
+  }
+
+  updateDirection() {
+    this.direction.set(player.pos.x - this.owner.pos.x, player.pos.y - this.owner.pos.y);
+    this.direction.normalize();
+  }
+
+  updateMovement() {
+
+    if (this.swinging) {
+      this.pos.x += this.speed*this.direction.x;
+      this.pos.y += this.speed*this.direction.y;
+    }
+    else {
+      this.pos.set(this.owner.pos.x, this.owner.pos.y);
+    }
+  }
+
+  checkCollisions() {
+
+    let collision = false;
+
+    if (this.pos.x <= player.currentRoom.x + this.size / 2) {
+      collision = true;
+    }
+    if (this.pos.x >= player.currentRoom.x + player.currentRoom.width - this.size / 2) {
+      collision = true;
+    }
+    if (this.pos.y <= player.currentRoom.y + player.size / 2) {
+      collision = true;
+    }
+    if (this.pos.y >= player.currentRoom.y + player.currentRoom.height - this.size / 2) {
+      collision = true;
+    }
+
+    if (! this.owner.dead && this.pos.dist(player.pos) < this.size/2 + player.size/2) {
+      collision = true;
+      player.getHit(this);
+    }
+
+    if (collision) {
+      this.winding = true;
+      this.swinging = false;
+
+      setTimeout(() => {
+        this.winding = false;
+      }, this.windTime);
     }
   }
 }
@@ -468,8 +597,7 @@ function draw() {
     someEntity.seekPlayer();
     someEntity.updateMovement();
     someEntity.checkWallCollisions();
-    someEntity.weapon.updateDirection();
-    someEntity.checkRange();
+    someEntity.weapon.handleStuff();
   }
   
   push();
@@ -528,6 +656,7 @@ function createFirstRoom() {
   let someRoom = new Room(0, 0, MINROOMSIZE, MINROOMSIZE);
   rooms.push(someRoom);
   someRoom.addCells();
+  someRoom.cleared = true;
 
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
@@ -545,7 +674,8 @@ function createFirstRoom() {
   let kb = 0.15;
   let owner = player;
 
-  player.weapon = new Weapon(diameter, reach, dmg, speed, kb, owner);
+  player.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner);
+  player.color = "pink";
 }
 
 
