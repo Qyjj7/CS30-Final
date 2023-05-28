@@ -111,6 +111,19 @@ class Room {
     }
   }
 
+  spawnStairs() {
+
+    while (this.cells.length > 0) {
+      let chosenCell = random(this.cells);
+      if (chosenCell.object === "blank") {
+
+        let stairs = new Door(chosenCell.x, chosenCell.y, 1, 1, "staircase");
+        this.doors.push(stairs);
+        break;
+      }
+    }
+  }
+
   addCells() {
 
     for (let x = 0; x < this.width; x++) {
@@ -161,6 +174,7 @@ class Room {
       let hp = 10;
       let size = 0.8;
       let room = this;
+      hp += hp*level/5;
       let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
       this.entities.push(enemy);
 
@@ -170,6 +184,7 @@ class Room {
       let speed = 200;
       let kb = 0.15;
       let owner = enemy;
+      dmg += dmg*level/5;
       enemy.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner);
     }
 
@@ -191,6 +206,7 @@ class Room {
       let speed = 0.06;
       let kb = 0.15;
       let owner = enemy;
+      dmg += dmg*level/5;
       enemy.weapon = new Wand(diameter, reach, dmg, speed, kb, owner);
     }
   }
@@ -254,6 +270,7 @@ class Entity {
     this.color = "black";
     this.knocked = false;
     this.dead = false;
+    this.onStairs = false;
     this.weapon;
   }
 
@@ -267,13 +284,13 @@ class Entity {
     if (this === player) {
       this.updateMovement();
       this.checkRoom();
-      this.checkWallCollisions();
+      this.checkCollisions();
       this.weapon.handleStuff();
     }
     else {
       this.seekPlayer();
       this.updateMovement();
-      this.checkWallCollisions();
+      this.checkCollisions();
       this.weapon.handleStuff();
     }
   }
@@ -282,7 +299,7 @@ class Entity {
     this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
     this.direction.normalize();
     
-    if (this.dead || this.weapon.winding || this.weapon.withinRange()) {
+    if (player.dead || this.dead || this.weapon.winding || this.weapon.withinRange()) {
       this.direction.set(0, 0);
     }
   }
@@ -326,12 +343,19 @@ class Entity {
   }
 
 
-  checkWallCollisions() {
+  checkCollisions() {
 
     let wallHere = true;
     for (let someDoor of this.currentRoom.doors) {
-      if (someDoor.playerCollision()) {
+      if (someDoor.playerCollision() && someDoor.type !== "staircase") {
         wallHere = false;
+        this.onStairs = false;
+      }
+      else if (this === player && someDoor.playerCollision()) {
+        this.onStairs = true;
+      }
+      else {
+        this.onStairs = false;
       }
     }
 
@@ -410,14 +434,16 @@ class Longsword {
 
   handleStuff() {
 
-    this.updateDirection();
-    if (this.owner !== player && ! this.owner.dead && this.withinRange()) {
-      this.winding = true;
-
-      setTimeout(() => {
-        this.winding = false;
-        this.attack();
-      }, this.windTime);
+    if(! player.dead) {
+      this.updateDirection();
+      if (this.owner !== player && ! this.owner.dead && this.withinRange()) {
+        this.winding = true;
+  
+        setTimeout(() => {
+          this.winding = false;
+          this.attack();
+        }, this.windTime);
+      }
     }
   }
 
@@ -490,11 +516,10 @@ class Wand {
 
   handleStuff() {
 
-    if (this.withinRange() && ! this.owner.dead && ! this.swinging && ! this.winding) {
+    if (this.withinRange() && ! this.owner.dead && ! player.dead && ! this.swinging && ! this.winding) {
 
       this.updateDirection();
       this.swinging = true;
-      
     }
     this.checkCollisions();
     this.updateMovement();
@@ -561,12 +586,12 @@ const CELLSIZE = 60;
 const DOORSIZE = 1/5;
 
 let rooms = [];
-let doors = [];
 let directions = ["north", "south", "east", "west"];
 let player;
 let paused = false;
 let totalFrames = 0;
 let theseFrames = 0;
+let level = 0;
 
 let swingImage;
 
@@ -578,9 +603,10 @@ function preload() {
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
+  setInterval(showFrames, 1000);
 
   createFirstRoom();
-  setInterval(showFrames, 1000);
+  createPlayer();
   generateRooms();
 }
 
@@ -589,10 +615,12 @@ function draw() {
   
   background(220);
 
-  playerInput();
-  player.handleStuff();
-  for (let someEntity of player.currentRoom.entities) {
-    someEntity.handleStuff();
+  if (!paused) {
+    playerInput();
+    player.handleStuff();
+    for (let someEntity of player.currentRoom.entities) {
+      someEntity.handleStuff();
+    }
   }
   
   push();
@@ -634,14 +662,28 @@ function displayInterface() {
   textSize(30);
   textAlign(LEFT);
   text("FPS: " + theseFrames, 20, 100);
+  text("Level: " + level, 20, 150);
 
   textSize(50);
   textAlign(LEFT);
-  text("Health: " + player.hp, 20, 50);
+  text("Health: " + player.hp.toFixed(1), 20, 50);
 
   textSize(20);
   textAlign(RIGHT);
   text("Press Space to Pause Game", width-20, 25);
+
+  if (player.onStairs && ! player.dead) {
+    textSize(15);
+    textAlign(CENTER);
+    text("Press F to Descend", width/2, height/2 + CELLSIZE/2);
+  }
+
+  if (player.dead) {
+    textSize(50);
+    textAlign(CENTER);
+    text("Game Over", width/2, height/2 - CELLSIZE);
+    text("Press F to Restart", width/2, height/2 + CELLSIZE);
+  }
 }
 
 
@@ -651,13 +693,7 @@ function showFrames() {
   totalFrames = frameCount;
 }
 
-
-function createFirstRoom() {
-
-  let someRoom = new Room(0, 0, MINROOMSIZE, MINROOMSIZE);
-  rooms.push(someRoom);
-  someRoom.addCells();
-  someRoom.cleared = true;
+function createPlayer() {
 
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
@@ -666,7 +702,7 @@ function createFirstRoom() {
   let hp = 25;
   let size = 0.5;
 
-  player = new Entity(x, y, acc, topSpeed, hp, size, someRoom);
+  player = new Entity(x, y, acc, topSpeed, hp, size, rooms[0]);
 
   let diameter = 0.8;
   let reach = 0.4;
@@ -677,6 +713,15 @@ function createFirstRoom() {
 
   player.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner);
   player.color = "pink";
+}
+
+
+function createFirstRoom() {
+
+  let someRoom = new Room(0, 0, MINROOMSIZE, MINROOMSIZE);
+  rooms.push(someRoom);
+  someRoom.addCells();
+  someRoom.cleared = true;
 }
 
 
@@ -710,6 +755,19 @@ function generateRooms() {
     someRoom.spawnDoors();
     someRoom.populate();
   }
+  rooms[rooms.length-1].spawnStairs();
+}
+
+
+function newLevel() {
+  level ++;
+  rooms.splice(0);
+
+  createFirstRoom();
+  generateRooms();
+
+  player.pos.set(floor(MINROOMSIZE/2) + 0.5, floor(MINROOMSIZE/2) + 0.5);
+  player.hp += 10;
 }
 
 
@@ -717,16 +775,35 @@ function mousePressed() {
 
 }
 
+function keyPressed() {
+  if (keyCode === 32) {
+    paused = abs(int(paused)-1);
+  }
+  if (!player.dead && player.onStairs && keyCode === 70) {
+    console.log("The air gets colder...");
+    console.log("The light gets thinner...");
+    newLevel();
+  }
+  if (player.dead && keyCode === 70) {
+    level = 0;
+    newLevel();
+    createPlayer();
+  }
+}
+
 
 function playerInput() {
 
-  player.direction.x = int(keyIsDown(68)) - int(keyIsDown(65));
-  player.direction.y = int(keyIsDown(83)) - int(keyIsDown(87));
+  if (! player.dead) {
+    player.direction.x = int(keyIsDown(68)) - int(keyIsDown(65));
+    player.direction.y = int(keyIsDown(83)) - int(keyIsDown(87));
+  
+    if (mouseIsPressed) {
+      player.weapon.attack();
+    }
+  }
+  else {
+    player.direction.set(0, 0);
+  }
 
-  if (mouseIsPressed) {
-    player.weapon.attack();
-  }
-  if (keyIsPressed && key === 32) {
-    paused = -paused;
-  }
 }
