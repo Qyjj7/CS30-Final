@@ -185,7 +185,7 @@ class Room {
       let kb = 0.15;
       let owner = enemy;
       dmg += dmg*level/5;
-      enemy.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner);
+      enemy.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner, swingImage);
     }
 
     else if (enemyType === "ranged") {
@@ -268,7 +268,7 @@ class Entity {
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
     this.immunityFrames = 0;
-    this.color = "black";
+    this.rotation = 0;
     this.knocked = false;
     this.dead = false;
     this.onStairs = false;
@@ -276,12 +276,14 @@ class Entity {
   }
 
   display() {
-    fill(this.color);
     //circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
     imageMode(CENTER);
     this.sprite.width = this.size*CELLSIZE;
     this.sprite.height = this.size*CELLSIZE;
+    push();
+    myRotate(this, this.rotation);
     image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
+    pop();
   }
 
   handleStuff() {
@@ -312,7 +314,6 @@ class Entity {
   updateMovement() {
 
     if (this.direction.x === 0 && this.direction.y === 0) {
-
       if (this.vel.mag() >= this.acceleration) {
         this.vel.setMag(this.vel.mag() - this.acceleration);
       }
@@ -325,6 +326,10 @@ class Entity {
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
       this.vel = this.vel.limit(this.topSpeed);
+    }
+
+    if (this.rotation > 0) {
+      this.rotation -= PI/16;
     }
 
     this.pos.add(this.vel);
@@ -395,6 +400,7 @@ class Entity {
 
       this.knocked = true;
       this.hp -= weapon.damage;
+      this.rotation = 2*PI;
       this.immunityFrames = 15;
 
       if (this.hp <= 0) {
@@ -410,7 +416,7 @@ class Entity {
 }
 
 class Longsword {
-  constructor(diameter, reach, dmg, speed, kb, owner) {
+  constructor(diameter, reach, dmg, speed, kb, owner, sprite) {
     this.name = "longsword";
     this.size = diameter;
     this.reach = reach;
@@ -419,8 +425,10 @@ class Longsword {
     this.speed = speed;
     this.knockback = kb;
     this.owner = owner;
+    this.sprite = sprite;
     this.knockbackTime = 300;
     this.windTime = 250;
+    this.rotation = 0;
     this.pos = createVector(0, 0);
     this.direction = createVector(0,0);
     this.swinging = false;
@@ -431,6 +439,14 @@ class Longsword {
     noFill();
     if (this.swinging || this.winding) {
       circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+
+      imageMode(CENTER);
+      this.sprite.width = this.size*CELLSIZE;
+      this.sprite.height = this.size*CELLSIZE;
+      push();
+      myRotate(this, this.rotation);
+      image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
+      pop();
     }
     else {
       line(this.owner.pos.x*CELLSIZE, this.owner.pos.y*CELLSIZE, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
@@ -507,6 +523,7 @@ class Wand {
     this.sprite = sprite;
     this.knockbackTime = 300;
     this.windTime = 2000;
+    this.rotation = 0;
     this.pos = createVector(owner.pos.x, owner.pos.y);
     this.direction = createVector(0,0);
     this.swinging = false;
@@ -516,11 +533,14 @@ class Wand {
   display() {
     noFill();
     if (this.swinging) {
-      //circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
       imageMode(CENTER);
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
+      push();
+      myRotate(this, this.rotation);
       image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
+      pop();
     }
   }
 
@@ -549,6 +569,7 @@ class Wand {
     if (this.swinging) {
       this.pos.x += this.speed*this.direction.x;
       this.pos.y += this.speed*this.direction.y;
+      this.rotation += PI/16;
     }
     else {
       this.pos.set(this.owner.pos.x, this.owner.pos.y);
@@ -580,6 +601,7 @@ class Wand {
     if (collision) {
       this.winding = true;
       this.swinging = false;
+      this.rotation = 0;
 
       setTimeout(() => {
         this.winding = false;
@@ -605,11 +627,13 @@ let level = 0;
 
 let meleeEnemyImage;
 let projectileImage;
+let swingImage;
 
 
 function preload() {
   meleeEnemyImage = loadImage("assets/melee_enemy.png");
-  projectileImage = loadImage("assets/tomato.png");
+  projectileImage = loadImage("assets/tomatobigger.png");
+  swingImage = loadImage("assets/tomatobigger.png");
 }
 
 function setup() {
@@ -623,7 +647,6 @@ function setup() {
   generateRooms();
 }
 
-
 function draw() {
   
   background(220);
@@ -635,7 +658,7 @@ function draw() {
       someEntity.handleStuff();
     }
   }
-  
+
   push();
   translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
   display();
@@ -643,17 +666,12 @@ function draw() {
   displayInterface();
 }
 
-
 function display() {
   for (let someRoom of rooms) {
     if (someRoom.cleared) {
       someRoom.display();
-      for (let someDoor of someRoom.doors) {
-        someDoor.display();
-      }
     }
   }
-
   for (let someCell of player.currentRoom.cells) {
     someCell.display();
   }
@@ -699,7 +717,6 @@ function displayInterface() {
   }
 }
 
-
 function showFrames() {
   theseFrames = frameCount;
   theseFrames -= totalFrames;
@@ -724,10 +741,8 @@ function createPlayer() {
   let kb = 0.15;
   let owner = player;
 
-  player.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner);
-  player.color = "pink";
+  player.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner, swingImage);
 }
-
 
 function createFirstRoom() {
 
@@ -736,7 +751,6 @@ function createFirstRoom() {
   someRoom.addCells();
   someRoom.cleared = true;
 }
-
 
 function generateRooms() {
 
@@ -771,6 +785,11 @@ function generateRooms() {
   rooms[rooms.length-1].spawnStairs();
 }
 
+function myRotate(object, radians) {
+  translate(object.pos.x*CELLSIZE, object.pos.y*CELLSIZE);
+  rotate(radians);
+  translate(-object.pos.x*CELLSIZE, -object.pos.y*CELLSIZE);
+}
 
 function newLevel() {
   level ++;
@@ -781,11 +800,6 @@ function newLevel() {
 
   player.pos.set(floor(MINROOMSIZE/2) + 0.5, floor(MINROOMSIZE/2) + 0.5);
   player.hp += 10;
-}
-
-
-function mousePressed() {
-
 }
 
 function keyPressed() {
@@ -803,7 +817,6 @@ function keyPressed() {
     createPlayer();
   }
 }
-
 
 function playerInput() {
 
