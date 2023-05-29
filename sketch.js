@@ -172,10 +172,10 @@ class Room {
       let acc = 0.004;
       let topSpeed = 0.05;
       let hp = 10;
-      let size = 0.8;
+      let size = 1.4;
       let room = this;
       hp += hp*level/5;
-      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
+      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room, meleeEnemyImage);
       this.entities.push(enemy);
 
       let diameter = 0.8;
@@ -195,9 +195,9 @@ class Room {
       let acc = 0.004;
       let topSpeed = 0.05;
       let hp = 4;
-      let size = 0.5;
+      let size = 0.8;
       let room = this;
-      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room);
+      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room, meleeEnemyImage);
       this.entities.push(enemy);
 
       let diameter = 0.6;
@@ -207,7 +207,7 @@ class Room {
       let kb = 0.15;
       let owner = enemy;
       dmg += dmg*level/5;
-      enemy.weapon = new Wand(diameter, reach, dmg, speed, kb, owner);
+      enemy.weapon = new Wand(diameter, reach, dmg, speed, kb, owner, projectileImage);
     }
   }
 }
@@ -257,13 +257,14 @@ class Door {
 }
 
 class Entity {
-  constructor(x, y, acc, topSpeed, hp, size, room) {
+  constructor(x, y, acc, topSpeed, hp, size, room, sprite) {
     this.pos = createVector(x, y);
     this.acceleration = acc;
     this.topSpeed = topSpeed;
     this.hp = hp;
     this.size = size;
     this.currentRoom = room;
+    this.sprite = sprite;
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
     this.immunityFrames = 0;
@@ -276,7 +277,11 @@ class Entity {
 
   display() {
     fill(this.color);
-    circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+    //circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+    imageMode(CENTER);
+    this.sprite.width = this.size*CELLSIZE;
+    this.sprite.height = this.size*CELLSIZE;
+    image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
   }
 
   handleStuff() {
@@ -333,7 +338,7 @@ class Entity {
       if (this.pos.x >= someRoom.x && this.pos.x <= someRoom.x+someRoom.width) {
         if (this.pos.y >= someRoom.y && this.pos.y <= someRoom.y+someRoom.height) {
           if (this.currentRoom !== someRoom) {
-            this.immunityFrames = 15;
+            this.immunityFrames = 25;
             this.currentRoom = someRoom;
             this.currentRoom.cleared = true;
           }
@@ -491,7 +496,7 @@ class Longsword {
 }
 
 class Wand {
-  constructor(diameter, reach, dmg, speed, kb, owner) {
+  constructor(diameter, reach, dmg, speed, kb, owner, sprite) {
     this.name = "wand";
     this.size = diameter;
     this.maxRange = reach;
@@ -499,6 +504,7 @@ class Wand {
     this.speed = speed;
     this.knockback = kb;
     this.owner = owner;
+    this.sprite = sprite;
     this.knockbackTime = 300;
     this.windTime = 2000;
     this.pos = createVector(owner.pos.x, owner.pos.y);
@@ -509,8 +515,12 @@ class Wand {
 
   display() {
     noFill();
-    if (this.swinging || this.winding) {
-      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+    if (this.swinging) {
+      //circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
+      imageMode(CENTER);
+      this.sprite.width = this.size*CELLSIZE;
+      this.sprite.height = this.size*CELLSIZE;
+      image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
     }
   }
 
@@ -562,7 +572,7 @@ class Wand {
       collision = true;
     }
 
-    if (! this.owner.dead && this.pos.dist(player.pos) < this.size/2 + player.size/2) {
+    if (this.swinging && this.pos.dist(player.pos) < this.size/2 + player.size/2) {
       collision = true;
       player.getHit(this);
     }
@@ -582,7 +592,7 @@ class Wand {
 const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 10;
-const CELLSIZE = 60;
+const CELLSIZE = 100;
 const DOORSIZE = 1/5;
 
 let rooms = [];
@@ -593,17 +603,20 @@ let totalFrames = 0;
 let theseFrames = 0;
 let level = 0;
 
-let swingImage;
+let meleeEnemyImage;
+let projectileImage;
 
 
 function preload() {
-  swingImage = loadImage("sword_swing.png");
+  meleeEnemyImage = loadImage("assets/melee_enemy.png");
+  projectileImage = loadImage("assets/tomato.png");
 }
 
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
   setInterval(showFrames, 1000);
+  imageMode(CENTER);
 
   createFirstRoom();
   createPlayer();
@@ -700,9 +713,9 @@ function createPlayer() {
   let acc = 0.008;
   let topSpeed = 0.07;
   let hp = 25;
-  let size = 0.5;
+  let size = 1;
 
-  player = new Entity(x, y, acc, topSpeed, hp, size, rooms[0]);
+  player = new Entity(x, y, acc, topSpeed, hp, size, rooms[0], meleeEnemyImage);
 
   let diameter = 0.8;
   let reach = 0.4;
@@ -785,7 +798,7 @@ function keyPressed() {
     newLevel();
   }
   if (player.dead && keyCode === 70) {
-    level = 0;
+    level = -1;
     newLevel();
     createPlayer();
   }
