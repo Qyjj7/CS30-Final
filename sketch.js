@@ -182,7 +182,7 @@ class Room {
       let reach = 0.4;
       let dmg = 1;
       let speed = 200;
-      let kb = 0.15;
+      let kb = 0.2;
       let owner = enemy;
       dmg += dmg*level/5;
       enemy.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner, swingImage);
@@ -204,7 +204,7 @@ class Room {
       let reach = 5;
       let dmg = 3;
       let speed = 0.06;
-      let kb = 0.15;
+      let kb = 0.2;
       let owner = enemy;
       dmg += dmg*level/5;
       enemy.weapon = new Wand(diameter, reach, dmg, speed, kb, owner, projectileImage);
@@ -276,8 +276,6 @@ class Entity {
   }
 
   display() {
-    //circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
-    imageMode(CENTER);
     this.sprite.width = this.size*CELLSIZE;
     this.sprite.height = this.size*CELLSIZE;
     push();
@@ -322,7 +320,7 @@ class Entity {
       }
     }
 
-    else if (!this.knocked) {
+    else {
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
       this.vel = this.vel.limit(this.topSpeed);
@@ -393,9 +391,8 @@ class Entity {
 
     if (this.immunityFrames <= 0) {
 
-      this.direction.set(-weapon.pos.x + this.pos.x, -weapon.pos.y + this.pos.y);
+      this.direction.set(weapon.direction.x, weapon.direction.y);
       this.direction.normalize();
-
       this.vel.set(weapon.knockback * this.direction.x, weapon.knockback * this.direction.y);
 
       this.knocked = true;
@@ -444,7 +441,7 @@ class Longsword {
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
       push();
-      myRotate(this, this.rotation);
+      myRotate(this, this.rotation + HALF_PI);
       image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
       pop();
     }
@@ -482,6 +479,8 @@ class Longsword {
     }
 
     this.direction.normalize();
+
+    this.rotation = myGetAngle(this.owner, this.direction.x, this.direction.y);
     this.direction.mult(this.reach);
     this.pos.set(this.owner.pos.x + this.direction.x, this.owner.pos.y + this.direction.y);
   }
@@ -621,8 +620,8 @@ let rooms = [];
 let directions = ["north", "south", "east", "west"];
 let player;
 let paused = false;
-let totalFrames = 0;
 let theseFrames = 0;
+let displayedFrames = 0;
 let level = 0;
 
 let meleeEnemyImage;
@@ -639,8 +638,12 @@ function preload() {
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
-  setInterval(showFrames, 1000);
   imageMode(CENTER);
+
+  setInterval(() => {
+    displayedFrames = theseFrames;
+    theseFrames = 0;
+  }, 1000);
 
   createFirstRoom();
   createPlayer();
@@ -650,6 +653,7 @@ function setup() {
 function draw() {
   
   background(220);
+  theseFrames ++;
 
   if (!paused) {
     playerInput();
@@ -692,7 +696,7 @@ function displayInterface() {
 
   textSize(30);
   textAlign(LEFT);
-  text("FPS: " + theseFrames, 20, 100);
+  text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
 
   textSize(50);
@@ -715,12 +719,6 @@ function displayInterface() {
     text("Game Over", width/2, height/2 - CELLSIZE);
     text("Press F to Restart", width/2, height/2 + CELLSIZE);
   }
-}
-
-function showFrames() {
-  theseFrames = frameCount;
-  theseFrames -= totalFrames;
-  totalFrames = frameCount;
 }
 
 function createPlayer() {
@@ -791,6 +789,13 @@ function myRotate(object, radians) {
   translate(-object.pos.x*CELLSIZE, -object.pos.y*CELLSIZE);
 }
 
+function myGetAngle(object, x, y) {
+  translate(object.pos.x*CELLSIZE, object.pos.y*CELLSIZE);
+  let angle = atan2(y, x);
+  translate(-object.pos.x*CELLSIZE, -object.pos.y*CELLSIZE);
+  return angle;
+}
+
 function newLevel() {
   level ++;
   rooms.splice(0);
@@ -820,7 +825,7 @@ function keyPressed() {
 
 function playerInput() {
 
-  if (! player.dead) {
+  if (! player.dead && ! player.knocked) {
     player.direction.x = int(keyIsDown(68)) - int(keyIsDown(65));
     player.direction.y = int(keyIsDown(83)) - int(keyIsDown(87));
   
