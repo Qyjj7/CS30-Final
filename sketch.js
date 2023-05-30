@@ -217,7 +217,7 @@ class Cell {
     this.x = x;
     this.y = y;
     this.object = "blank";
-    this.color = "white";
+    this.color = color(113, 92, 72);
   }
 
   display() {
@@ -326,7 +326,10 @@ class Entity {
       this.vel = this.vel.limit(this.topSpeed);
     }
 
-    if (this.rotation > 0) {
+    if (! this.dead && this.rotation > 0) {
+      this.rotation -= PI/16;
+    }
+    else if (this.rotation > PI) {
       this.rotation -= PI/16;
     }
 
@@ -433,20 +436,13 @@ class Longsword {
   }
 
   display() {
-    noFill();
     if (this.swinging || this.winding) {
-      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
-
-      imageMode(CENTER);
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
       push();
       myRotate(this, this.rotation + HALF_PI);
       image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
       pop();
-    }
-    else {
-      line(this.owner.pos.x*CELLSIZE, this.owner.pos.y*CELLSIZE, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
     }
   }
 
@@ -530,9 +526,7 @@ class Wand {
   }
 
   display() {
-    noFill();
     if (this.swinging) {
-      circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
       imageMode(CENTER);
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
@@ -632,7 +626,7 @@ let swingImage;
 function preload() {
   meleeEnemyImage = loadImage("assets/melee_enemy.png");
   projectileImage = loadImage("assets/tomatobigger.png");
-  swingImage = loadImage("assets/tomatobigger.png");
+  swingImage = loadImage("assets/swing.png");
 }
 
 function setup() {
@@ -732,7 +726,7 @@ function createPlayer() {
 
   player = new Entity(x, y, acc, topSpeed, hp, size, rooms[0], meleeEnemyImage);
 
-  let diameter = 0.8;
+  let diameter = 1;
   let reach = 0.4;
   let dmg = 4;
   let speed = 200;
