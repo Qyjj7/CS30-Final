@@ -169,9 +169,15 @@ class Room {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
+      
+      let angle = random(TWO_PI);
+      let seekPos = createVector(cos(angle), sin(angle));
+      seekPos.mult(enemySwordStats.reach + enemySwordStats.size/2);
+
       let hp = meleeEnemyStats.hp;
       hp += hp*level/5;
-      let enemy = new Entity(xPos, yPos, meleeEnemyStats.acceleration, meleeEnemyStats.topSpeed, hp, meleeEnemyStats.size, this, meleeEnemyImage);
+
+      let enemy = new Entity(xPos, yPos, meleeEnemyStats.acceleration, meleeEnemyStats.topSpeed, hp, meleeEnemyStats.size, this, seekPos, meleeEnemyImage);
       this.entities.push(enemy);
 
       let dmg = enemySwordStats.dmg;
@@ -183,9 +189,13 @@ class Room {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
+
+      let seekPos = createVector(0, 0);
+
       let hp = 4;
       hp += hp*level/5;
-      let enemy = new Entity(xPos, yPos, rangedEnemyStats.acceleration, rangedEnemyStats.topSpeed, hp, rangedEnemyStats.size, rooms[0], meleeEnemyImage);
+
+      let enemy = new Entity(xPos, yPos, rangedEnemyStats.acceleration, rangedEnemyStats.topSpeed, hp, rangedEnemyStats.size, this, seekPos, meleeEnemyImage);
       this.entities.push(enemy);
 
       let dmg = 3;
@@ -240,16 +250,18 @@ class Door {
 }
 
 class Entity {
-  constructor(x, y, acc, topSpeed, hp, size, room, sprite) {
+  constructor(x, y, acc, topSpeed, hp, size, room, seekPos, sprite) {
     this.pos = createVector(x, y);
     this.acceleration = acc;
     this.topSpeed = topSpeed;
     this.hp = hp;
+    this.maxHp = hp;
     this.size = size;
     this.currentRoom = room;
     this.sprite = sprite;
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
+    this.seekPos = seekPos;
     this.immunityFrames = 0;
     this.rotation = 0;
     this.knocked = false;
@@ -284,7 +296,7 @@ class Entity {
   }
 
   seekPlayer() {
-    this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
+    this.direction.set(player.pos.x + this.seekPos.x - this.pos.x, player.pos.y + this.seekPos.x - this.pos.y);
     this.direction.normalize();
     
     if (this.dead || this.weapon.withinRange()) {
@@ -458,6 +470,7 @@ class Longsword {
   }
 
   withinRange() {
+    let point = createVector(player.pos.x + this.owner.seekPos.x, player.pos.y + this.owner.seekPos.y);
     return this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
   }
 
@@ -721,7 +734,7 @@ function displayInterface() {
 
   textSize(50);
   textAlign(LEFT);
-  text("Health: " + player.hp.toFixed(1), 20, 50);
+  text("Health: " + (player.hp/player.maxHp*100).toFixed(0) + "%", 20, 50);
 
   textSize(20);
   textAlign(RIGHT);
@@ -745,7 +758,7 @@ function createPlayer() {
 
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
-  player = new Entity(x, y, playerStats.acceleration, playerStats.topSpeed, playerStats.hp, playerStats.size, rooms[0], meleeEnemyImage);
+  player = new Entity(x, y, playerStats.acceleration, playerStats.topSpeed, playerStats.hp, playerStats.size, rooms[0], null, meleeEnemyImage);
   player.weapon = new Longsword(swordStats.size, swordStats.reach, swordStats.dmg, swordStats.kb, swordStats.maxCharge, player, swingImage);
 }
 
@@ -812,6 +825,10 @@ function newLevel() {
 
   player.pos.set(floor(MINROOMSIZE/2) + 0.5, floor(MINROOMSIZE/2) + 0.5);
   player.hp += 10;
+
+  if (player.hp > player.maxHp) {
+    player.hp = 25;
+  }
 }
 
 function keyPressed() {
