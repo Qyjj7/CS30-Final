@@ -287,7 +287,7 @@ class Entity {
     this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
     this.direction.normalize();
     
-    if (player.dead || this.dead || this.weapon.withinRange()) {
+    if (this.dead || this.weapon.withinRange()) {
       this.direction.set(0, 0);
     }
   }
@@ -306,7 +306,7 @@ class Entity {
     else {
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
-      if (this.weapon.currentCharge === this.weapon.maxCharge) {
+      if (this.weapon.currentCharge >= this.weapon.maxCharge) {
         this.vel = this.vel.limit(this.topSpeed*0.6);
       }
       else {
@@ -332,7 +332,7 @@ class Entity {
       if (this.pos.x >= someRoom.x && this.pos.x <= someRoom.x+someRoom.width) {
         if (this.pos.y >= someRoom.y && this.pos.y <= someRoom.y+someRoom.height) {
           if (this.currentRoom !== someRoom) {
-            this.immunityFrames = 25;
+            this.immunityFrames = 30;
             this.currentRoom = someRoom;
             this.currentRoom.cleared = true;
           }
@@ -450,14 +450,15 @@ class Longsword {
 
   handleStuff() {
 
-    if(! this.owner.dead) {
+    if (! this.owner.dead) {
       this.updateDirection();
       this.windUp();
     }
+    
   }
 
   withinRange() {
-    return ! this.dead && this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
+    return this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
   }
 
   updateDirection() {
@@ -492,7 +493,7 @@ class Longsword {
       if (this.withinRange() && this.currentCharge < this.maxCharge) {
         this.currentCharge ++;
       }
-      else if (this.currentCharge === this.maxCharge) {
+      else if (this.currentCharge >= this.maxCharge) {
         this.attack(1);
         this.currentCharge = this.minCharge;
       }
@@ -727,9 +728,9 @@ function displayInterface() {
   text("Press Space to Pause Game", width-20, 25);
 
   if (player.onStairs && ! player.dead) {
-    textSize(15);
+    textSize(20);
     textAlign(CENTER);
-    text("Press F to Descend", width/2, height/2 + CELLSIZE/2);
+    text("Press F to Descend", width/2, height/2 + CELLSIZE*0.75);
   }
 
   if (player.dead) {
