@@ -169,46 +169,28 @@ class Room {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
-      let acc = 0.004;
-      let topSpeed = 0.05;
-      let hp = 10;
-      let size = 1.4;
-      let room = this;
+      let hp = meleeEnemyStats.hp;
       hp += hp*level/5;
-      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room, meleeEnemyImage);
+      let enemy = new Entity(xPos, yPos, meleeEnemyStats.acceleration, meleeEnemyStats.topSpeed, hp, meleeEnemyStats.size, this, meleeEnemyImage);
       this.entities.push(enemy);
 
-      let diameter = 0.8;
-      let reach = 0.4;
-      let dmg = 1;
-      let speed = 200;
-      let kb = 0.2;
-      let owner = enemy;
-      let maxCharge = 20;
+      let dmg = enemySwordStats.dmg;
       dmg += dmg*level/5;
-      enemy.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner, maxCharge, swingImage);
+      enemy.weapon = new Longsword(enemySwordStats.size, enemySwordStats.reach, enemySwordStats.dmg, enemySwordStats.kb, enemySwordStats.maxCharge, enemy, swingImage);
     }
 
     else if (enemyType === "ranged") {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
-      let acc = 0.004;
-      let topSpeed = 0.05;
       let hp = 4;
-      let size = 0.8;
-      let room = this;
-      let enemy = new Entity(xPos, yPos, acc, topSpeed, hp, size, room, meleeEnemyImage);
+      hp += hp*level/5;
+      let enemy = new Entity(xPos, yPos, rangedEnemyStats.acceleration, rangedEnemyStats.topSpeed, hp, rangedEnemyStats.size, rooms[0], meleeEnemyImage);
       this.entities.push(enemy);
 
-      let diameter = 0.6;
-      let reach = 5;
       let dmg = 3;
-      let speed = 0.06;
-      let kb = 0.2;
-      let owner = enemy;
       dmg += dmg*level/5;
-      enemy.weapon = new Wand(diameter, reach, dmg, speed, kb, owner, projectileImage);
+      enemy.weapon = new Wand(enemyWandStats.size, enemyWandStats.reach, dmg, enemyWandStats.vel, enemyWandStats.kb, enemy, projectileImage);
     }
   }
 }
@@ -305,7 +287,7 @@ class Entity {
     this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
     this.direction.normalize();
     
-    if (player.dead || this.dead || this.weapon.winding || this.weapon.withinRange()) {
+    if (player.dead || this.dead || this.weapon.withinRange()) {
       this.direction.set(0, 0);
     }
   }
@@ -324,12 +306,12 @@ class Entity {
     else {
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
-      if (this.weapon.winding) {
-        this.vel = this.vel.limit(this.topSpeed/2);
+      if (this.weapon.currentCharge === this.weapon.maxCharge) {
+        this.vel = this.vel.limit(this.topSpeed*0.6);
       }
       else {
         this.vel = this.vel.limit(this.topSpeed);
-      }
+      }  
     }
 
     if (! this.dead && this.rotation > 0) {
@@ -377,35 +359,44 @@ class Entity {
     }
 
     if (wallHere) {
+      let changeX = false;
+      let changeY = false;
       if (this.pos.x <= player.currentRoom.x + this.size / 2) {
         this.pos.x = player.currentRoom.x + this.size / 2;
-        this.vel.x *= -1;
+        changeX = true;
       }
       if (this.pos.x >= player.currentRoom.x + player.currentRoom.width - this.size / 2) {
         this.pos.x = player.currentRoom.x + player.currentRoom.width - this.size / 2;
-        this.vel.x *= -1;
+        changeX = true;
       }
       if (this.pos.y <= player.currentRoom.y + player.size / 2) {
         this.pos.y = player.currentRoom.y + player.size / 2;
-        this.vel.y *= -1;
+        changeY = true;
       }
       if (this.pos.y >= player.currentRoom.y + player.currentRoom.height - this.size / 2) {
         this.pos.y = player.currentRoom.y + player.currentRoom.height - this.size / 2;
+        changeY = true;
+      }
+
+      if (changeX && this.knocked) {
+        this.vel.x *= -1;
+      }
+      else if (changeY && this.knocked) {
         this.vel.y *= -1;
       }
     }
   }
 
-  getHit(weapon) {
+  getHit(weapon, charge) {
 
     if (this.immunityFrames <= 0) {
 
       this.direction.set(weapon.direction.x, weapon.direction.y);
       this.direction.normalize();
-      this.vel.set(weapon.knockback * this.direction.x, weapon.knockback * this.direction.y);
+      this.vel.set(weapon.knockback * this.direction.x * charge, weapon.knockback * this.direction.y * charge);
 
       this.knocked = true;
-      this.hp -= weapon.damage;
+      this.hp -= weapon.damage*charge;
       this.rotation = 2*PI;
       this.immunityFrames = 15;
 
@@ -422,24 +413,24 @@ class Entity {
 }
 
 class Longsword {
-  constructor(diameter, reach, dmg, speed, kb, owner, maxCharge, sprite) {
+  constructor(diameter, reach, dmg, kb, maxCharge, owner, sprite) {
     this.name = "longsword";
     this.size = diameter;
     this.reach = reach;
     this.maxRange = diameter/2 + reach;
     this.damage = dmg;
-    this.speed = speed;
     this.knockback = kb;
     this.owner = owner;
     this.sprite = sprite;
     this.maxCharge = maxCharge;
-    this.currentCharge = 0;
-    this.knockbackTime = 300;
+    this.minCharge = maxCharge/4;
+    this.currentCharge = maxCharge/4;
+    this.knockbackTime = kb*1000;
     this.rotation = 0;
+    this.animationSpeed = 300;
     this.pos = createVector(0, 0);
     this.direction = createVector(0,0);
     this.swinging = false;
-    this.winding = false;
   }
 
   display() {
@@ -451,7 +442,7 @@ class Longsword {
       image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
       pop();
     }
-    else if (this.winding && ! this.owner.dead) {
+    else if (this.currentCharge > this.minCharge && ! this.owner.dead) {
       noFill();
       circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
     }
@@ -461,9 +452,7 @@ class Longsword {
 
     if(! this.owner.dead) {
       this.updateDirection();
-      if (! this.swinging) {
-        this.windUp();
-      }
+      this.windUp();
     }
   }
 
@@ -476,7 +465,7 @@ class Longsword {
     if (this === player.weapon) {
       this.direction.set(mouseX - width/2, mouseY - height/2);
     }
-    else if (! this.winding) {
+    else {
       this.direction.set(player.pos.x - this.owner.pos.x, player.pos.y - this.owner.pos.y);
     }
 
@@ -490,28 +479,25 @@ class Longsword {
   windUp() {
 
     if (this.owner === player) {
-      if (mouseIsPressed) {
-        if (this.currentCharge < this.maxCharge) {
-          this.currentCharge ++;
-        }
-        this.winding = true;
+      if (mouseIsPressed && this.currentCharge < this.maxCharge) {
+        this.currentCharge ++;
       }
-      else if (this.winding) {
+      else if (! mouseIsPressed && this.currentCharge > this.minCharge) {
         this.attack(this.currentCharge/this.maxCharge);
-        this.winding = false;
-        this.currentCharge = 0;
+        this.currentCharge = this.minCharge;
       }
     }
 
     else {
       if (this.withinRange() && this.currentCharge < this.maxCharge) {
         this.currentCharge ++;
-        this.winding = true;
       }
-      else if (this.winding) {
-        this.attack(this.currentCharge/this.maxCharge);
-        this.winding = false;
-        this.currentCharge = 0;
+      else if (this.currentCharge === this.maxCharge) {
+        this.attack(1);
+        this.currentCharge = this.minCharge;
+      }
+      else {
+        this.currentCharge = this.minCharge;
       }
     }
     
@@ -535,29 +521,28 @@ class Longsword {
     this.swinging = true;
     setTimeout(() => {
       this.swinging = false;
-    }, this.speed);
+    }, this.animationSpeed);
   }
 }
 
 class Wand {
-  constructor(diameter, reach, dmg, speed, kb, owner, sprite) {
+  constructor(diameter, reach, dmg, vel, kb, owner, sprite) {
     this.name = "wand";
     this.size = diameter;
     this.maxRange = reach;
     this.damage = dmg;
-    this.speed = speed;
+    this.vel = vel;
     this.knockback = kb;
     this.owner = owner;
     this.sprite = sprite;
-    this.currentCharge = 0;
-    this.maxCharge = 100;
-    this.knockbackTime = 300;
-    this.windTime = 2000;
+    this.maxCharge = 120;
+    this.minCharge = this.maxCharge/4;
+    this.currentCharge = this.maxCharge/4;
+    this.knockbackTime = kb*1000;
     this.rotation = 0;
     this.pos = createVector(owner.pos.x, owner.pos.y);
     this.direction = createVector(0,0);
     this.swinging = false;
-    this.winding = false;
   }
 
   display() {
@@ -574,7 +559,7 @@ class Wand {
 
   handleStuff() {
 
-    if (this.withinRange() && ! this.owner.dead) {
+    if (this.withinRange() && ! this.owner.dead && ! this.swinging) {
       this.windUp();
     }
     this.checkCollisions();
@@ -591,23 +576,21 @@ class Wand {
   }
 
   windUp() {
-    if (this.withinRange() && this.currentCharge < this.maxCharge) {
+    if (this.currentCharge < this.maxCharge) {
       this.currentCharge ++;
-      this.winding = true;
     }
-    else if (this.winding) {
+    else {
       this.updateDirection();
       this.swinging = true;
-      this.winding = false;
-      this.currentCharge = 0;
+      this.currentCharge = this.minCharge;
     }
   }
 
   updateMovement() {
 
     if (this.swinging) {
-      this.pos.x += this.speed*this.direction.x;
-      this.pos.y += this.speed*this.direction.y;
+      this.pos.x += this.vel*this.direction.x;
+      this.pos.y += this.vel*this.direction.y;
       this.rotation += PI/16;
     }
     else {
@@ -733,7 +716,7 @@ function displayInterface() {
   textAlign(LEFT);
   text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
-  text("Charge: " + player.weapon.currentCharge, 20, 200);
+  text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
 
   textSize(50);
   textAlign(LEFT);
@@ -761,22 +744,8 @@ function createPlayer() {
 
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
-  let acc = 0.008;
-  let topSpeed = 0.07;
-  let hp = 25;
-  let size = 1;
-
-  player = new Entity(x, y, acc, topSpeed, hp, size, rooms[0], meleeEnemyImage);
-
-  let diameter = 1;
-  let reach = 0.4;
-  let dmg = 4;
-  let speed = 200;
-  let kb = 0.15;
-  let owner = player;
-  let maxCharge = 100;
-
-  player.weapon = new Longsword(diameter, reach, dmg, speed, kb, owner, maxCharge, swingImage);
+  player = new Entity(x, y, playerStats.acceleration, playerStats.topSpeed, playerStats.hp, playerStats.size, rooms[0], meleeEnemyImage);
+  player.weapon = new Longsword(swordStats.size, swordStats.reach, swordStats.dmg, swordStats.kb, swordStats.maxCharge, player, swingImage);
 }
 
 function createFirstRoom() {
@@ -846,7 +815,7 @@ function newLevel() {
 
 function keyPressed() {
   if (keyCode === 32) {
-    paused = abs(int(paused)-1);
+    paused = !paused;
   }
   if (!player.dead && player.onStairs && keyCode === 70) {
     console.log("The air gets colder...");
