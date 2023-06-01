@@ -389,30 +389,21 @@ class Entity {
     }
 
     if (wallHere) {
-      let changeX = false;
-      let changeY = false;
+
       if (this.pos.x <= player.currentRoom.x + this.size / 2) {
         this.pos.x = player.currentRoom.x + this.size / 2;
-        changeX = true;
       }
       if (this.pos.x >= player.currentRoom.x + player.currentRoom.width - this.size / 2) {
         this.pos.x = player.currentRoom.x + player.currentRoom.width - this.size / 2;
-        changeX = true;
       }
       if (this.pos.y <= player.currentRoom.y + player.size / 2) {
         this.pos.y = player.currentRoom.y + player.size / 2;
-        changeY = true;
+        if (this.knocked) {
+          this.vel.y *= -1;
+        }
       }
       if (this.pos.y >= player.currentRoom.y + player.currentRoom.height - this.size / 2) {
         this.pos.y = player.currentRoom.y + player.currentRoom.height - this.size / 2;
-        changeY = true;
-      }
-
-      if (changeX && this.knocked) {
-        this.vel.x *= -1;
-      }
-      else if (changeY && this.knocked) {
-        this.vel.y *= -1;
       }
     }
   }
@@ -422,7 +413,6 @@ class Entity {
     if (this.immunityFrames <= 0) {
 
       this.direction.set(weapon.direction.x, weapon.direction.y);
-      this.direction.normalize();
       this.vel.set(weapon.knockback * this.direction.x * charge, weapon.knockback * this.direction.y * charge);
 
       this.knocked = true;
@@ -504,8 +494,8 @@ class Longsword {
     this.direction.normalize();
 
     this.rotation = myGetAngle(this.owner, this.direction.x, this.direction.y);
-    this.direction.mult(this.reach);
-    this.pos.set(this.owner.pos.x + this.direction.x, this.owner.pos.y + this.direction.y);
+    //this.direction.mult(this.reach);
+    this.pos.set(this.owner.pos.x + this.direction.x*this.reach, this.owner.pos.y + this.direction.y*this.reach);
   }
 
   windUp() {
