@@ -73,37 +73,20 @@ class Room {
           for (let otherCell of otherRoom.cells) {
 
             if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
-              options.push([someCell, otherCell, "horizontal"]);
+              options.push([otherCell.x - 0.5, otherCell.y]);
             }
             else if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
-              options.push([someCell, otherCell, "vertical"]);
+              options.push([otherCell.x, otherCell.y - 0.5]);
             }
           }
         }
 
         if (options.length > 0) {
           let chosenDoor = random(options);
-          chosenDoor[0].object = "door";
-          chosenDoor[1].object = "door";
-          let w;
-          let h; 
-          let x;
-          let y;
-          
-          if (chosenDoor[2] === "vertical") {
-            w = 1;
-            h = DOORSIZE;
-            x = chosenDoor[1].x;
-            y = chosenDoor[1].y - h/2;
-          }
-          else {
-            w = DOORSIZE;
-            h = 1;
-            x = chosenDoor[1].x - w/2;
-            y = chosenDoor[1].y;
-          }
+          let x = chosenDoor[0];
+          let y = chosenDoor[1];
 
-          let newInteractable = new Interactable(x, y, w, h, chosenDoor[2]);
+          let newInteractable = new Interactable(x, y, 1, 1, "door", doorImage);
           this.interactables.push(newInteractable);
           otherRoom.interactables.push(newInteractable);
         }
@@ -117,7 +100,7 @@ class Room {
       let chosenCell = random(this.cells);
       if (chosenCell.object === "blank") {
 
-        let stairs = new Interactable(chosenCell.x, chosenCell.y, 1, 1, "staircase");
+        let stairs = new Interactable(chosenCell.x, chosenCell.y, 1, 1, "staircase", stairsImage);
         this.interactables.push(stairs);
         break;
       }
@@ -176,13 +159,13 @@ class Room {
       let yPos = cell.y + 0.5;
       
       let angle = random(TWO_PI);
-      let seekPos = createVector(cos(angle), sin(angle));
-      seekPos.mult(enemySwordStats.reach + enemySwordStats.size/2);
+      let destination = createVector(cos(angle), sin(angle));
+      destination.mult(enemySwordStats.reach + enemySwordStats.size/2);
 
       let hp = meleeEnemyStats.hp;
       hp += hp*level/5;
 
-      let enemy = new Entity(xPos, yPos, meleeEnemyStats.acceleration, meleeEnemyStats.topSpeed, hp, meleeEnemyStats.size, this, seekPos, meleeEnemyImage);
+      let enemy = new Entity(xPos, yPos, meleeEnemyStats.acceleration, meleeEnemyStats.topSpeed, hp, meleeEnemyStats.size, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
 
       let dmg = enemySwordStats.dmg;
@@ -195,12 +178,12 @@ class Room {
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
 
-      let seekPos = createVector(0, 0);
+      let destination = createVector(0, 0);
 
       let hp = 4;
       hp += hp*level/5;
 
-      let enemy = new Entity(xPos, yPos, rangedEnemyStats.acceleration, rangedEnemyStats.topSpeed, hp, rangedEnemyStats.size, this, seekPos, meleeEnemyImage);
+      let enemy = new Entity(xPos, yPos, rangedEnemyStats.acceleration, rangedEnemyStats.topSpeed, hp, rangedEnemyStats.size, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
 
       let dmg = 3;
@@ -230,36 +213,30 @@ class Cell {
 }
 
 class Interactable {
-  constructor(x, y, w, h, type) {
+  constructor(x, y, w, h, type, sprite) {
     this.x = x;
     this.y = y;
     this.width = w;
     this.height = h;
     this.type = type;
-    this.image = stairsImage;
+    this.image = sprite;
     this.color = color(75, 38, 2);
   }
 
   display() {
-    if (this.type === "staircase") {
-      this.image.width = this.width*CELLSIZE;
-      this.image.height = this.height*CELLSIZE;
-      push();
-      imageMode(CORNER);
-      image(this.image, this.x*CELLSIZE, this.y*CELLSIZE);
-      pop();
-    }
+    this.image.width = this.width*CELLSIZE;
+    this.image.height = this.height*CELLSIZE;
+    push();
+    imageMode(CORNER);
+    image(this.image, this.x*CELLSIZE, this.y*CELLSIZE);
+    pop();
 
-    else {
-      fill(this.color);
-      rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
-    }
   }
 
   playerCollision() {
 
-    if (player.pos.x + player.size/2 >= this.x && player.pos.x - player.size/2 < this.x+this.width) {
-      if (player.pos.y + player.size/2 >= this.y && player.pos.y - player.size/2 < this.y+this.height) {
+    if (player.pos.x >= this.x && player.pos.x < this.x + this.width) {
+      if (player.pos.y >= this.y && player.pos.y < this.y + this.height) {
         return true;
       }
     }
@@ -268,7 +245,7 @@ class Interactable {
 }
 
 class Entity {
-  constructor(x, y, acc, topSpeed, hp, size, room, seekPos, sprite) {
+  constructor(x, y, acc, topSpeed, hp, size, room, destination, sprite) {
     this.pos = createVector(x, y);
     this.acceleration = acc;
     this.topSpeed = topSpeed;
@@ -279,7 +256,7 @@ class Entity {
     this.sprite = sprite;
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
-    this.seekPos = seekPos;
+    this.destination = destination;
     this.immunityFrames = 0;
     this.rotation = 0;
     this.knocked = false;
@@ -315,7 +292,7 @@ class Entity {
   }
 
   seekPlayer() {
-    this.direction.set(player.pos.x + this.seekPos.x - this.pos.x, player.pos.y + this.seekPos.x - this.pos.y);
+    this.direction.set(player.pos.x + this.destination.x - this.pos.x, player.pos.y + this.destination.x - this.pos.y);
     this.direction.normalize();
     
     if (this.dead || this.weapon.withinRange()) {
@@ -376,7 +353,7 @@ class Entity {
 
     let wallHere = true;
     for (let someInteractable of this.currentRoom.interactables) {
-      if (someInteractable.playerCollision() && someInteractable.type !== "staircase") {
+      if (this === player && someInteractable.playerCollision() && someInteractable.type !== "staircase") {
         wallHere = false;
         this.onStairs = false;
       }
@@ -390,20 +367,29 @@ class Entity {
 
     if (wallHere) {
 
-      if (this.pos.x <= player.currentRoom.x + this.size / 2) {
-        this.pos.x = player.currentRoom.x + this.size / 2;
-      }
-      if (this.pos.x >= player.currentRoom.x + player.currentRoom.width - this.size / 2) {
-        this.pos.x = player.currentRoom.x + player.currentRoom.width - this.size / 2;
-      }
-      if (this.pos.y <= player.currentRoom.y + player.size / 2) {
-        this.pos.y = player.currentRoom.y + player.size / 2;
-        if (this.knocked) {
-          this.vel.y *= -1;
+      if (this.pos.x < this.currentRoom.x + this.size / 2) {
+        this.pos.x = this.currentRoom.x + this.size / 2;
+        if (this.knocked || this !== player) {
+          this.vel.x = -this.vel.x;
         }
       }
-      if (this.pos.y >= player.currentRoom.y + player.currentRoom.height - this.size / 2) {
-        this.pos.y = player.currentRoom.y + player.currentRoom.height - this.size / 2;
+      if (this.pos.x > this.currentRoom.x + this.currentRoom.width - this.size / 2) {
+        this.pos.x = this.currentRoom.x + this.currentRoom.width - this.size / 2;
+        if (this.knocked || this !== player) {
+          this.vel.x = -this.vel.x;
+        }
+      }
+      if (this.pos.y < this.currentRoom.y + this.size / 2) {
+        this.pos.y = this.currentRoom.y + this.size / 2;
+        if (this.knocked || this !== player) {
+          this.vel.y = -this.vel.y;
+        }
+      }
+      if (this.pos.y > this.currentRoom.y + this.currentRoom.height - this.size / 2) {
+        this.pos.y = this.currentRoom.y + this.currentRoom.height - this.size / 2;
+        if (this.knocked || this !== player) {
+          this.vel.y = -this.vel.y;
+        }
       }
     }
   }
@@ -668,6 +654,7 @@ let meleeEnemyImage;
 let projectileImage;
 let swingImage;
 let stairsImage;
+let doorImage;
 
 let greyBackgroundImage;
 let greyTileImage1;
@@ -688,6 +675,7 @@ function preload() {
   projectileImage = loadImage("assets/tomatobigger.png");
   swingImage = loadImage("assets/swing.png");
   stairsImage = loadImage("assets/stairs.png");
+  doorImage = loadImage("assets/door.png");
 
   greyBackgroundImage = loadImage("assets/grey_background.png");
   greyTileImage1 = loadImage("assets/grey_tile1.png");
