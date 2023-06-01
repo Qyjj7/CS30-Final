@@ -6,13 +6,13 @@ class Room {
     this.y = y;
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
-    this.doors = [];
+    this.interactables = [];
     this.entities = [];
     this.cleared = false;
   }
 
   display() {
-    fill("grey");
+    noFill();
     rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
   }
 
@@ -46,7 +46,7 @@ class Room {
     let thisRoom = [];
     for (let x = this.x; x < this.x+this.width; x++) {
       for (let y = this.y; y < this.y+this.height; y++) {
-        thisRoom.push(new Cell(x, y));
+        thisRoom.push({x: x, y: y});
       }
     }
 
@@ -103,9 +103,9 @@ class Room {
             y = chosenDoor[1].y;
           }
 
-          let newDoor = new Door(x, y, w, h, chosenDoor[2]);
-          this.doors.push(newDoor);
-          otherRoom.doors.push(newDoor);
+          let newInteractable = new Interactable(x, y, w, h, chosenDoor[2]);
+          this.interactables.push(newInteractable);
+          otherRoom.interactables.push(newInteractable);
         }
       }
     }
@@ -117,8 +117,8 @@ class Room {
       let chosenCell = random(this.cells);
       if (chosenCell.object === "blank") {
 
-        let stairs = new Door(chosenCell.x, chosenCell.y, 1, 1, "staircase");
-        this.doors.push(stairs);
+        let stairs = new Interactable(chosenCell.x, chosenCell.y, 1, 1, "staircase");
+        this.interactables.push(stairs);
         break;
       }
     }
@@ -129,8 +129,18 @@ class Room {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         
-        let newCell = new Cell(x + this.x, y + this.y);
+        let sprite;
+        if (backgroundColor === greyBackgroundImage) {
+          sprite = random([greyTileImage1, greyTileImage2]);
+        }
+        else if (backgroundColor === blueBackgroundImage) {
+          sprite = random([blueTileImage1, blueTileImage2]);
+        }
+        else {
+          sprite = random([greenTileImage1, greenTileImage2]);
+        }
 
+        let newCell = new Cell(x + this.x, y + this.y, sprite);
         this.cells.push(newCell);
       }
     }
@@ -141,14 +151,9 @@ class Room {
     if (rooms[0] !== this) {
 
       let enemyCount = this.width*this.height/15;
-      let tempCells = structuredClone(this.cells);
-      for (let i = this.cells.length-1; i >= 0; i--) {
-        if (this.cells[i].object !== "blank") {
-          tempCells.splice(i, 1);
-        }
-      }
+
       for (let i = 0; i < enemyCount; i++) {
-        let chosenCell = random(tempCells);
+        let chosenCell = random(this.cells);
         this.determineEnemyStats(chosenCell);
       }
     }
@@ -206,36 +211,49 @@ class Room {
 }
 
 class Cell {
-  constructor(x, y) {
+  constructor(x, y, sprite) {
     this.x = x;
     this.y = y;
+    this.sprite = sprite;
     this.object = "blank";
     this.color = color(113, 92, 72);
   }
 
   display() {
-    fill(this.color);
-    rect(this.x*CELLSIZE, this.y*CELLSIZE, CELLSIZE, CELLSIZE);
-  }
-
-  determineColor(color) {
-    this.color = color;
+    this.sprite.width = CELLSIZE+CELLSIZE*0.01;
+    this.sprite.height = CELLSIZE+CELLSIZE*0.01;
+    push();
+    imageMode(CORNER);
+    image(this.sprite, this.x*CELLSIZE, this.y*CELLSIZE);
+    pop();
   }
 }
 
-class Door {
-  constructor(x, y, w, h, orientation) {
+class Interactable {
+  constructor(x, y, w, h, type) {
     this.x = x;
     this.y = y;
     this.width = w;
     this.height = h;
-    this.type = orientation;
-    this.color = "purple";
+    this.type = type;
+    this.image = stairsImage;
+    this.color = color(75, 38, 2);
   }
 
   display() {
-    fill(this.color);
-    rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
+    if (this.type === "staircase") {
+      this.image.width = this.width*CELLSIZE;
+      this.image.height = this.height*CELLSIZE;
+      push();
+      imageMode(CORNER);
+      image(this.image, this.x*CELLSIZE, this.y*CELLSIZE);
+      pop();
+    }
+
+    else {
+      fill(this.color);
+      rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
+    }
   }
 
   playerCollision() {
@@ -281,6 +299,7 @@ class Entity {
 
   handleStuff() {
 
+    this.immunityFrames --;
     if (this === player) {
       this.updateMovement();
       this.checkRoom();
@@ -334,7 +353,6 @@ class Entity {
     }
 
     this.pos.add(this.vel);
-    this.immunityFrames --;
   }
 
 
@@ -357,12 +375,12 @@ class Entity {
   checkCollisions() {
 
     let wallHere = true;
-    for (let someDoor of this.currentRoom.doors) {
-      if (someDoor.playerCollision() && someDoor.type !== "staircase") {
+    for (let someInteractable of this.currentRoom.interactables) {
+      if (someInteractable.playerCollision() && someInteractable.type !== "staircase") {
         wallHere = false;
         this.onStairs = false;
       }
-      else if (this === player && someDoor.playerCollision()) {
+      else if (this === player && someInteractable.playerCollision()) {
         this.onStairs = true;
       }
       else {
@@ -415,6 +433,7 @@ class Entity {
       if (this.hp <= 0) {
         this.dead = true;
         this.color = "red";
+        this.hp = 0;
       }
 
       setTimeout(() => {
@@ -470,7 +489,6 @@ class Longsword {
   }
 
   withinRange() {
-    let point = createVector(player.pos.x + this.owner.seekPos.x, player.pos.y + this.owner.seekPos.y);
     return this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
   }
 
@@ -561,7 +579,6 @@ class Wand {
 
   display() {
     if (this.swinging) {
-      imageMode(CENTER);
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
       push();
@@ -648,8 +665,9 @@ const ROOMQUANTITY = 10;
 const CELLSIZE = 100;
 const DOORSIZE = 1/5;
 
-let rooms = [];
 let directions = ["north", "south", "east", "west"];
+let rooms = [];
+let backgroundColor;
 let player;
 let paused = false;
 let theseFrames = 0;
@@ -659,18 +677,55 @@ let level = 0;
 let meleeEnemyImage;
 let projectileImage;
 let swingImage;
+let stairsImage;
+
+let greyBackgroundImage;
+let greyTileImage1;
+let greyTileImage2;
+
+let blueBackgroundImage;
+let blueTileImage1;
+let blueTileImage2;
+
+let greenBackgroundImage;
+let greenTileImage1;
+let greenTileImage2;
 
 
 function preload() {
+
   meleeEnemyImage = loadImage("assets/melee_enemy.png");
   projectileImage = loadImage("assets/tomatobigger.png");
   swingImage = loadImage("assets/swing.png");
+  stairsImage = loadImage("assets/stairs.png");
+
+  greyBackgroundImage = loadImage("assets/grey_background.png");
+  greyTileImage1 = loadImage("assets/grey_tile1.png");
+  greyTileImage2 = loadImage("assets/grey_tile2.png");
+
+  blueBackgroundImage = loadImage("assets/blue_background.png");
+  blueTileImage1 = loadImage("assets/blue_tile1.png");
+  blueTileImage2 = loadImage("assets/blue_tile2.png");
+
+  greenBackgroundImage = loadImage("assets/green_background.png");
+  greenTileImage1 = loadImage("assets/green_tile1.png");
+  greenTileImage2 = loadImage("assets/green_tile2.png");
 }
 
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
   imageMode(CENTER);
+  strokeWeight(2);
+
+  greyBackgroundImage.width = width;
+  greyBackgroundImage.height = height;
+  blueBackgroundImage.width = width;
+  blueBackgroundImage.height = height;
+  greenBackgroundImage.width = width;
+  greenBackgroundImage.height = height;
+
+  backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
   setInterval(() => {
     displayedFrames = theseFrames;
@@ -683,10 +738,10 @@ function setup() {
 }
 
 function draw() {
-  
-  background(220);
-  theseFrames ++;
 
+  image(backgroundColor, width/2, height/2);
+
+  theseFrames ++;
   if (!paused) {
     playerInput();
     player.handleStuff();
@@ -703,16 +758,18 @@ function draw() {
 }
 
 function display() {
+
   for (let someRoom of rooms) {
     if (someRoom.cleared) {
       someRoom.display();
     }
   }
+
   for (let someCell of player.currentRoom.cells) {
     someCell.display();
   }
-  for (let someDoor of player.currentRoom.doors) {
-    someDoor.display();
+  for (let someInteractable of player.currentRoom.interactables) {
+    someInteractable.display();
   }
   for (let someEnemy of player.currentRoom.entities) {
     someEnemy.display();
@@ -724,17 +781,27 @@ function display() {
 }
 
 function displayInterface() {
-  fill("black");
+
+  let w = 500;
+  let h = 40;
+  let x = 20;
+  let y = 15;
+  noFill();
+  rect(x, y, w, h);
+  fill("red");
+  w *= player.hp/player.maxHp;
+  rect(x, y, w, h);
+
+  fill("white");
+  textSize(h);
+  textAlign(CENTER);
+  text((player.hp/player.maxHp*100).toFixed(0) + "%", 250+x, 50);
 
   textSize(30);
   textAlign(LEFT);
   text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
-
-  textSize(50);
-  textAlign(LEFT);
-  text("Health: " + (player.hp/player.maxHp*100).toFixed(0) + "%", 20, 50);
 
   textSize(20);
   textAlign(RIGHT);
@@ -801,6 +868,7 @@ function generateRooms() {
     someRoom.populate();
   }
   rooms[rooms.length-1].spawnStairs();
+  //rooms[0].spawnStairs();
 }
 
 function myRotate(object, radians) {
@@ -819,6 +887,14 @@ function myGetAngle(object, x, y) {
 function newLevel() {
   level ++;
   rooms.splice(0);
+  
+  let colorOptions = [greyBackgroundImage, blueBackgroundImage, greenBackgroundImage];
+  for (let i = 0; i < colorOptions.length; i++) {
+    if (backgroundColor === colorOptions[i]) {
+      colorOptions.splice(i, 1);
+    }
+  }
+  backgroundColor = random(colorOptions);
 
   createFirstRoom();
   generateRooms();
