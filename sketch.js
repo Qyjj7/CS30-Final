@@ -253,10 +253,10 @@ class Entity {
     this.maxHp = hp;
     this.size = size;
     this.currentRoom = room;
+    this.destination = destination;
     this.sprite = sprite;
     this.vel = createVector(0, 0);
     this.direction = createVector(0, 0);
-    this.destination = destination;
     this.immunityFrames = 0;
     this.rotation = 0;
     this.knocked = false;
@@ -733,6 +733,10 @@ function draw() {
   display();
   pop();
   displayInterface();
+
+  if (paused) {
+    displayStats();
+  }
 }
 
 function display() {
@@ -797,6 +801,25 @@ function displayInterface() {
     text("Game Over", width/2, height/2 - CELLSIZE);
     text("Press F to Restart", width/2, height/2 + CELLSIZE);
   }
+}
+
+function displayStats() {
+  let l = 600;
+  let x = width/2;
+  let y = height/2;
+
+  fill(80);
+  rect(x-l/2, y-l/2, l/2, l); // stats
+
+  fill("white");
+  textSize(30);
+  textAlign(CENTER);
+  text("STATS", x-l/4, y-l/2 + l/12);
+  textAlign(LEFT);
+  text("Max HP:", x-l/2, y-l/2 + l/6);
+  text("Max Speed:", x-l/2, y-l/2 + l/4);
+  text("Weapon Size:", x-l/2, y-l/2 + l/3);
+
 }
 
 function createPlayer() {
