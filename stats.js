@@ -6,14 +6,40 @@ let playerStats = {
   size: 1,
 };
 
-let swordStats = {
+let LongswordStats = {
 
   size: 0.8,
   reach: 0.4,
   dmg: 8,
   kb: 0.15,
+  kbTime: 150,
   maxCharge: 80,
+  minCharge: 20,
   slowness: 0.03,
+};
+
+let daggerStats = {
+
+  size: 0.5,
+  reach: 0.5,
+  dmg: 5,
+  kb: 0.1,
+  kbTime: 100,
+  maxCharge: 30,
+  minCharge: 15,
+  slowness: 0,
+};
+
+let battleaxeStats = {
+
+  size: 1.2,
+  reach: 0.3,
+  dmg: 12,
+  kb: 0.3,
+  kbTime: 300,
+  maxCharge: 120,
+  minCharge: 0,
+  slowness: 0.05
 };
 
 let meleeEnemyStats = {
@@ -30,7 +56,9 @@ let enemySwordStats = {
   reach: 0.3,
   dmg: 1,
   kb: 0.15,
+  kbTime: 0.15,
   maxCharge: 20,
+  minCharge: 0,
   slowness: 0,
 };
 
@@ -46,8 +74,12 @@ let rangedEnemyStats = {
 let enemyWandStats = {
 
   size: 0.6,
-  reach:5,
+  reach: 5,
   dmg: 3,
   vel: 0.08,
   kb: 0.25,
+  kbTime: 250,
+  maxCharge: 100,
+  minCharge: 0,
+  slowness: 0,
 };

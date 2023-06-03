@@ -155,40 +155,36 @@ class Room {
 
     if (enemyType === "melee") {
 
+      let someEntity = structuredClone(meleeEnemyStats);
+      someEntity.hp += someEntity.hp*level/5;
+      let someWeapon = structuredClone(enemySwordStats);
+      someWeapon.dmg += someWeapon.dmg*level/5;
+
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
-      
       let angle = random(TWO_PI);
       let destination = createVector(cos(angle), sin(angle));
-      destination.mult(enemySwordStats.reach + enemySwordStats.size/2);
+      destination.mult(someWeapon.reach + someWeapon.size/2);
 
-      let hp = meleeEnemyStats.hp;
-      hp += hp*level/5;
-
-      let enemy = new Entity(xPos, yPos, meleeEnemyStats.acceleration, meleeEnemyStats.topSpeed, hp, meleeEnemyStats.size, this, destination, meleeEnemyImage);
+      let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
-
-      let dmg = enemySwordStats.dmg;
-      dmg += dmg*level/5;
-      enemy.weapon = new Longsword(enemySwordStats.size, enemySwordStats.reach, enemySwordStats.dmg, enemySwordStats.kb, enemySwordStats.maxCharge, enemySwordStats.slowness, enemy, swingImage);
+      enemy.weapon = new Longsword(someWeapon, enemy, swingImage);
     }
 
     else if (enemyType === "ranged") {
 
+      let someEntity = structuredClone(rangedEnemyStats);
+      someEntity.hp += someEntity.hp*level/5;
+      let someWeapon = structuredClone(enemyWandStats);
+      someWeapon.dmg += someWeapon.dmg*level/5;
+
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
-
       let destination = createVector(0, 0);
 
-      let hp = 4;
-      hp += hp*level/5;
-
-      let enemy = new Entity(xPos, yPos, rangedEnemyStats.acceleration, rangedEnemyStats.topSpeed, hp, rangedEnemyStats.size, this, destination, meleeEnemyImage);
+      let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
-
-      let dmg = 3;
-      dmg += dmg*level/5;
-      enemy.weapon = new Wand(enemyWandStats.size, enemyWandStats.reach, dmg, enemyWandStats.vel, enemyWandStats.kb, enemy, projectileImage);
+      enemy.weapon = new Wand(someWeapon, enemy, projectileImage);
     }
   }
 }
@@ -245,13 +241,13 @@ class Interactable {
 }
 
 class Entity {
-  constructor(x, y, acc, topSpeed, hp, size, room, destination, sprite) {
+  constructor(x, y, someEntity, room, destination, sprite) {
     this.pos = createVector(x, y);
-    this.acceleration = acc;
-    this.topSpeed = topSpeed;
-    this.hp = hp;
-    this.maxHp = hp;
-    this.size = size;
+    this.acceleration = someEntity.acceleration;
+    this.topSpeed = someEntity.topSpeed;
+    this.hp = someEntity.hp;
+    this.maxHp = someEntity.hp;
+    this.size = someEntity.size;
     this.currentRoom = room;
     this.destination = destination;
     this.sprite = sprite;
@@ -281,12 +277,14 @@ class Entity {
       this.updateMovement();
       this.checkRoom();
       this.checkCollisions();
-      this.weapon.handleStuff();
     }
     else {
       this.seekPlayer();
       this.updateMovement();
       this.checkCollisions();
+      
+    }
+    if (! this.knocked) {
       this.weapon.handleStuff();
     }
   }
@@ -415,19 +413,19 @@ class Entity {
 }
 
 class Longsword {
-  constructor(diameter, reach, dmg, kb, maxCharge, slowness, owner, sprite) {
-    this.size = diameter;
-    this.reach = reach;
-    this.maxRange = diameter/2 + reach;
-    this.damage = dmg;
-    this.knockback = kb;
+  constructor(someWeapon, owner, sprite) {
+    this.size = someWeapon.size;
+    this.reach = someWeapon.reach;
+    this.maxRange = someWeapon.size/2 + someWeapon.reach;
+    this.damage = someWeapon.dmg;
+    this.knockback = someWeapon.kb;
+    this.knockbackTime = someWeapon.kbTime;
+    this.maxCharge = someWeapon.maxCharge;
+    this.minCharge = someWeapon.minCharge;
+    this.currentCharge = someWeapon.minCharge;
+    this.slowness = someWeapon.slowness;
     this.owner = owner;
     this.sprite = sprite;
-    this.maxCharge = maxCharge;
-    this.slowness = slowness;
-    this.minCharge = 0;
-    this.currentCharge = 0;
-    this.knockbackTime = kb*1000;
     this.rotation = 0;
     this.animationSpeed = 300;
     this.pos = createVector(0, 0);
@@ -528,19 +526,19 @@ class Longsword {
 }
 
 class Wand {
-  constructor(diameter, reach, dmg, vel, kb, owner, sprite) {
-    this.size = diameter;
-    this.maxRange = reach;
-    this.damage = dmg;
-    this.vel = vel;
-    this.knockback = kb;
+  constructor(someWeapon, owner, sprite) {
+    this.size = someWeapon.size;
+    this.maxRange = someWeapon.reach;
+    this.damage = someWeapon.dmg;
+    this.vel = someWeapon.vel;
+    this.knockback = someWeapon.kb;
+    this.knockbackTime = someWeapon.kbTime;
+    this.maxCharge = someWeapon.maxCharge;
+    this.minCharge = someWeapon.minCharge;
+    this.currentCharge = someWeapon.minCharge;
+    this.slowness = someWeapon.slowness;
     this.owner = owner;
     this.sprite = sprite;
-    this.maxCharge = 120;
-    this.slowness = 0;
-    this.minCharge = this.maxCharge/4;
-    this.currentCharge = this.maxCharge/4;
-    this.knockbackTime = kb*1000;
     this.rotation = 0;
     this.pos = createVector(owner.pos.x, owner.pos.y);
     this.direction = createVector(0,0);
@@ -820,9 +818,13 @@ function createPlayer() {
 
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
-  player = new Entity(x, y, playerStats.acceleration, playerStats.topSpeed, playerStats.hp, playerStats.size, rooms[0], null, meleeEnemyImage);
-  player.weapon = new Longsword(swordStats.size, swordStats.reach, swordStats.dmg, swordStats.kb, swordStats.maxCharge, swordStats.slowness, player, swingImage);
-  determineWeaponStats(player.weapon);
+
+  let someWeapon = random([LongswordStats, daggerStats, battleaxeStats]);
+  let someEntity = playerStats;
+
+  player = new Entity(x, y, someEntity, rooms[0], null, meleeEnemyImage);
+  player.weapon = new Longsword(someWeapon, player, swingImage);
+  //determineWeaponStats(player.weapon);
 }
 
 function createFirstRoom() {
@@ -904,33 +906,6 @@ function newLevel() {
 }
 
 function determineWeaponStats(object) {
-
-  let weight = random([1, 1.2, 1.4, 2, 1.8, 1.6]);
-  console.log(weight);
-
-  let dmgMod = random(0, weight/3);
-  let kbMod = random(0, weight/3);
-  let sizeMod = random(0, weight/3);
-  let buffRemainder = (weight - dmgMod - kbMod - sizeMod)/3;
-  dmgMod += buffRemainder;
-  kbMod += buffRemainder;
-  sizeMod += buffRemainder;
-
-  object.damage += object.damage*dmgMod;
-  object.knockback += object.knockback*kbMod;
-  object.size += object.size*sizeMod;
-
-
-  let chargeMod = random(0, weight/2);
-  let slowMod = random(0, weight/2);
-  let nerfRemainder = (weight - chargeMod - slowMod)/2;
-  dmgMod += nerfRemainder;
-  kbMod += nerfRemainder;
-
-  object.maxCharge += object.maxCharge*chargeMod;
-  object.slowness += object.slowness*slowMod;
-  object.minCharge = object.maxCharge/5;
-  object.currentCharge = object.maxCharge/5;
 }
 
 function keyPressed() {
