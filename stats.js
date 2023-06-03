@@ -1,18 +1,19 @@
 let playerStats = {
 
   acceleration: 0.008,
-  topSpeed: 0.07,
+  topSpeed: 0.08,
   hp: 25,
   size: 1,
 };
 
 let swordStats = {
 
-  size: 1,
+  size: 0.8,
   reach: 0.4,
-  dmg: 10,
-  kb: 0.2,
+  dmg: 8,
+  kb: 0.15,
   maxCharge: 80,
+  slowness: 0.03,
 };
 
 let meleeEnemyStats = {
@@ -29,7 +30,8 @@ let enemySwordStats = {
   reach: 0.3,
   dmg: 1,
   kb: 0.15,
-  maxCharge: 30,
+  maxCharge: 20,
+  slowness: 0,
 };
 
 let rangedEnemyStats = {
@@ -38,6 +40,7 @@ let rangedEnemyStats = {
   topSpeed: 0.05,
   hp: 5,
   size: 0.8,
+  slowness: 0,
 };
 
 let enemyWandStats = {

@@ -170,7 +170,7 @@ class Room {
 
       let dmg = enemySwordStats.dmg;
       dmg += dmg*level/5;
-      enemy.weapon = new Longsword(enemySwordStats.size, enemySwordStats.reach, enemySwordStats.dmg, enemySwordStats.kb, enemySwordStats.maxCharge, enemy, swingImage);
+      enemy.weapon = new Longsword(enemySwordStats.size, enemySwordStats.reach, enemySwordStats.dmg, enemySwordStats.kb, enemySwordStats.maxCharge, enemySwordStats.slowness, enemy, swingImage);
     }
 
     else if (enemyType === "ranged") {
@@ -314,12 +314,7 @@ class Entity {
     else {
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
-      if (this.weapon.currentCharge >= this.weapon.maxCharge) {
-        this.vel = this.vel.limit(this.topSpeed*0.6);
-      }
-      else {
-        this.vel = this.vel.limit(this.topSpeed);
-      }  
+      this.vel = this.vel.limit(this.topSpeed - this.weapon.slowness*this.weapon.currentCharge/this.weapon.maxCharge);
     }
 
     if (! this.dead && this.rotation > 0) {
@@ -420,8 +415,7 @@ class Entity {
 }
 
 class Longsword {
-  constructor(diameter, reach, dmg, kb, maxCharge, owner, sprite) {
-    this.name = "longsword";
+  constructor(diameter, reach, dmg, kb, maxCharge, slowness, owner, sprite) {
     this.size = diameter;
     this.reach = reach;
     this.maxRange = diameter/2 + reach;
@@ -430,8 +424,9 @@ class Longsword {
     this.owner = owner;
     this.sprite = sprite;
     this.maxCharge = maxCharge;
-    this.minCharge = maxCharge/4;
-    this.currentCharge = maxCharge/4;
+    this.slowness = slowness;
+    this.minCharge = 0;
+    this.currentCharge = 0;
     this.knockbackTime = kb*1000;
     this.rotation = 0;
     this.animationSpeed = 300;
@@ -480,7 +475,6 @@ class Longsword {
     this.direction.normalize();
 
     this.rotation = myGetAngle(this.owner, this.direction.x, this.direction.y);
-    //this.direction.mult(this.reach);
     this.pos.set(this.owner.pos.x + this.direction.x*this.reach, this.owner.pos.y + this.direction.y*this.reach);
   }
 
@@ -535,7 +529,6 @@ class Longsword {
 
 class Wand {
   constructor(diameter, reach, dmg, vel, kb, owner, sprite) {
-    this.name = "wand";
     this.size = diameter;
     this.maxRange = reach;
     this.damage = dmg;
@@ -544,6 +537,7 @@ class Wand {
     this.owner = owner;
     this.sprite = sprite;
     this.maxCharge = 120;
+    this.slowness = 0;
     this.minCharge = this.maxCharge/4;
     this.currentCharge = this.maxCharge/4;
     this.knockbackTime = kb*1000;
@@ -827,7 +821,8 @@ function createPlayer() {
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
   player = new Entity(x, y, playerStats.acceleration, playerStats.topSpeed, playerStats.hp, playerStats.size, rooms[0], null, meleeEnemyImage);
-  player.weapon = new Longsword(swordStats.size, swordStats.reach, swordStats.dmg, swordStats.kb, swordStats.maxCharge, player, swingImage);
+  player.weapon = new Longsword(swordStats.size, swordStats.reach, swordStats.dmg, swordStats.kb, swordStats.maxCharge, swordStats.slowness, player, swingImage);
+  determineWeaponStats(player.weapon);
 }
 
 function createFirstRoom() {
@@ -908,6 +903,36 @@ function newLevel() {
   }
 }
 
+function determineWeaponStats(object) {
+
+  let weight = random([1, 1.2, 1.4, 2, 1.8, 1.6]);
+  console.log(weight);
+
+  let dmgMod = random(0, weight/3);
+  let kbMod = random(0, weight/3);
+  let sizeMod = random(0, weight/3);
+  let buffRemainder = (weight - dmgMod - kbMod - sizeMod)/3;
+  dmgMod += buffRemainder;
+  kbMod += buffRemainder;
+  sizeMod += buffRemainder;
+
+  object.damage += object.damage*dmgMod;
+  object.knockback += object.knockback*kbMod;
+  object.size += object.size*sizeMod;
+
+
+  let chargeMod = random(0, weight/2);
+  let slowMod = random(0, weight/2);
+  let nerfRemainder = (weight - chargeMod - slowMod)/2;
+  dmgMod += nerfRemainder;
+  kbMod += nerfRemainder;
+
+  object.maxCharge += object.maxCharge*chargeMod;
+  object.slowness += object.slowness*slowMod;
+  object.minCharge = object.maxCharge/5;
+  object.currentCharge = object.maxCharge/5;
+}
+
 function keyPressed() {
   if (keyCode === 32) {
     paused = !paused;
@@ -922,6 +947,10 @@ function keyPressed() {
     newLevel();
     createPlayer();
   }
+}
+
+function mousePressed() {
+  //determineWeaponStats(player.weapon);
 }
 
 function playerInput() {
