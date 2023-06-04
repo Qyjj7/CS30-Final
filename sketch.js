@@ -6,10 +6,9 @@ class Room {
     this.y = y;
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
-    this.interactables = [];
+    this.containers = [];
     this.doors = [];
     this.entities = [];
-    this.items = [];
     this.cleared = false;
   }
 
@@ -109,10 +108,16 @@ class Room {
 
   spawnPots() {
 
-    while (this.cells.length > 0) {
-      let chosenCell = random(this.cells);
-      if (chosenCell.stairs && ! chosenCell.door) {
-        let hi = "hi";
+    let potCount = this.width*this.height/15;
+
+    for (let i = 0; i <= potCount; i++) {
+      while (this.cells.length > 0) {
+        let chosenCell = random(this.cells);
+        if (! chosenCell.stairs && ! chosenCell.door) {
+          let pot = new Container(chosenCell);
+          this.containers.push(pot);
+          break;
+        }
       }
     }
   }
@@ -339,19 +344,19 @@ class Entity {
 
     let wallHere = true;
     if (this === player) {
-      for (let someDoor of player.currentRoom.doors) {
 
+      for (let someDoor of player.currentRoom.doors) {
         if (floor(player.pos.x) === someDoor.x && floor(player.pos.y) === someDoor.y) {
           wallHere = false;
         }
       }
+
       if (floor(player.pos.x) === stairs.x && floor(player.pos.y) === stairs.y) {
         player.onStairs = true;
       }
       else {
         player.onStairs = false;
-      }
-      
+      } 
     }
 
     if (wallHere) {
@@ -514,6 +519,10 @@ class Longsword {
       }
     }
 
+    for (let someContainer of player.currentRoom.containers) {
+      someContainer.checkCollisions(this);
+    }
+
     this.swinging = true;
     setTimeout(() => {
       this.swinging = false;
@@ -622,6 +631,39 @@ class Wand {
   }
 }
 
+class Container {
+  constructor(cell) {
+    this.x = cell.x;
+    this.y = cell.y;
+    this.width = 0.4;
+    this.height = 0.5;
+    this.dead = false;
+  }
+
+  display() {
+
+    potImage.width = this.width*CELLSIZE;
+    potImage.height = this.height*CELLSIZE;
+
+    if (! this.dead) {
+      image(potImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
+    }
+    else {
+      image(brokenPotImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
+    }
+  }
+
+  checkCollisions(someEntity) {
+    if (someEntity.pos.x + someEntity.size/2 > this.x
+      && someEntity.pos.x - someEntity.size/2 < this.x + this.width
+      && someEntity.pos.y + someEntity.size/2 > this.y
+      && someEntity.pos.y - someEntity.size/2 < this.y + this.height
+    ) {
+      this.dead = true;
+    }
+  }
+}
+
 
 const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
@@ -629,7 +671,6 @@ const ROOMQUANTITY = 10;
 const CELLSIZE = 100;
 const DOORSIZE = 1/5;
 
-let theGround = {dead: true};
 let directions = ["north", "south", "east", "west"];
 let rooms = [];
 let backgroundColor;
@@ -645,6 +686,8 @@ let projectileImage;
 let swingImage;
 let stairsImage;
 let doorImage;
+let potImage;
+let brokenPotImage;
 
 let greyBackgroundImage;
 let greyTileImage1;
@@ -666,6 +709,8 @@ function preload() {
   swingImage = loadImage("assets/swing.png");
   stairsImage = loadImage("assets/stairs.png");
   doorImage = loadImage("assets/door.png");
+  potImage = loadImage("assets/pot.png");
+  brokenPotImage = loadImage("assets/broken_pot.png");
 
   greyBackgroundImage = loadImage("assets/grey_background.png");
   greyTileImage1 = loadImage("assets/grey_tile1.png");
@@ -720,9 +765,6 @@ function draw() {
     for (let someEntity of player.currentRoom.entities) {
       someEntity.handleStuff();
     }
-    for (let someInteractable of player.currentRoom.interactables) {
-      someInteractable.playerCollision();
-    }
   }
 
   push();
@@ -747,8 +789,8 @@ function display() {
   for (let someCell of player.currentRoom.cells) {
     someCell.display();
   }
-  for (let someInteractable of player.currentRoom.interactables) {
-    someInteractable.display();
+  for (let someContainer of player.currentRoom.containers) {
+    someContainer.display();
   }
   for (let someEnemy of player.currentRoom.entities) {
     someEnemy.display();
@@ -869,12 +911,10 @@ function generateRooms() {
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
     someRoom.populate();
+    someRoom.spawnPots();
   }
 
-  let someRoom = int(random(1, ROOMQUANTITY));
-  someRoom.createItem;
   rooms[rooms.length-1].spawnStairs();
-  //rooms[0].spawnStairs();
 }
 
 function myRotate(object, radians) {
