@@ -13,9 +13,9 @@ let LongswordStats = {
   dmg: 8,
   kb: 0.15,
   kbTime: 150,
-  maxCharge: 80,
-  minCharge: 20,
-  slowness: 0.03,
+  maxCharge: 60,
+  minCharge: 15,
+  slowness: 0.025,
 };
 
 let daggerStats = {
@@ -23,8 +23,8 @@ let daggerStats = {
   size: 0.5,
   reach: 0.5,
   dmg: 5,
-  kb: 0.1,
-  kbTime: 100,
+  kb: 0.08,
+  kbTime: 80,
   maxCharge: 30,
   minCharge: 15,
   slowness: 0,

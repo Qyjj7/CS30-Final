@@ -7,7 +7,9 @@ class Room {
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
     this.interactables = [];
+    this.doors = [];
     this.entities = [];
+    this.items = [];
     this.cleared = false;
   }
 
@@ -24,19 +26,19 @@ class Room {
     
     if (spawningSide === "north") {
       newRoom.y -= newRoom.height;
-      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
+      newRoom.x += floor(random(-newRoom.width+3, this.width-3));
     }
     if (spawningSide === "south") {
       newRoom.y += this.height;
-      newRoom.x += floor(random(-newRoom.width+1, this.width-1));
+      newRoom.x += floor(random(-newRoom.width+3, this.width-3));
     }
     if (spawningSide === "east") {
       newRoom.x += this.width;
-      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
+      newRoom.y += floor(random(-newRoom.height+3, this.height-3));
     }
     if (spawningSide === "west") {
       newRoom.x -= newRoom.width;
-      newRoom.y += floor(random(-newRoom.height+1, this.height-1));
+      newRoom.y += floor(random(-newRoom.height+3, this.height-3));
     } 
     return newRoom;
   }
@@ -71,24 +73,23 @@ class Room {
 
         for (let someCell of this.cells) {
           for (let otherCell of otherRoom.cells) {
-
-            if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
-              options.push([otherCell.x - 0.5, otherCell.y]);
-            }
-            else if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
-              options.push([otherCell.x, otherCell.y - 0.5]);
+            
+            if (! someCell.corner && ! otherCell.corner) {
+              if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
+                options.push([someCell, otherCell]);
+              }
+              else if (someCell.x === otherCell.x && someCell.y === otherCell.y - 1) {
+                options.push([someCell, otherCell]);
+              }
             }
           }
         }
-
         if (options.length > 0) {
           let chosenDoor = random(options);
-          let x = chosenDoor[0];
-          let y = chosenDoor[1];
-
-          let newInteractable = new Interactable(x, y, 1, 1, "door", doorImage);
-          this.interactables.push(newInteractable);
-          otherRoom.interactables.push(newInteractable);
+          chosenDoor[0].door = true;
+          chosenDoor[1].door = true;
+          this.doors.push(chosenDoor[0]);
+          otherRoom.doors.push(chosenDoor[1]);
         }
       }
     }
@@ -98,11 +99,20 @@ class Room {
 
     while (this.cells.length > 0) {
       let chosenCell = random(this.cells);
-      if (chosenCell.object === "blank") {
-
-        let stairs = new Interactable(chosenCell.x, chosenCell.y, 1, 1, "staircase", stairsImage);
-        this.interactables.push(stairs);
+      if (! chosenCell.door) {
+        chosenCell.stairs = true;
+        stairs = chosenCell;
         break;
+      }
+    }
+  }
+
+  spawnPots() {
+
+    while (this.cells.length > 0) {
+      let chosenCell = random(this.cells);
+      if (chosenCell.stairs && ! chosenCell.door) {
+        let hi = "hi";
       }
     }
   }
@@ -123,7 +133,10 @@ class Room {
           sprite = random([greenTileImage1, greenTileImage2]);
         }
 
-        let newCell = new Cell(x + this.x, y + this.y, sprite);
+        let newCell = new Cell(x + this.x, y + this.y, this, sprite);
+        if (x % (this.width-1) === 0 && y % (this.height-1) === 0) {
+          newCell.corner = true;
+        }
         this.cells.push(newCell);
       }
     }
@@ -190,12 +203,15 @@ class Room {
 }
 
 class Cell {
-  constructor(x, y, sprite) {
+  constructor(x, y, room, sprite) {
     this.x = x;
     this.y = y;
+    this.room = room;
     this.sprite = sprite;
     this.object = "blank";
-    this.color = color(113, 92, 72);
+    this.corner = false;
+    this.door = false;
+    this.stairs = false;
   }
 
   display() {
@@ -204,39 +220,15 @@ class Cell {
     push();
     imageMode(CORNER);
     image(this.sprite, this.x*CELLSIZE, this.y*CELLSIZE);
-    pop();
-  }
-}
 
-class Interactable {
-  constructor(x, y, w, h, type, sprite) {
-    this.x = x;
-    this.y = y;
-    this.width = w;
-    this.height = h;
-    this.type = type;
-    this.image = sprite;
-    this.color = color(75, 38, 2);
-  }
-
-  display() {
-    this.image.width = this.width*CELLSIZE;
-    this.image.height = this.height*CELLSIZE;
-    push();
-    imageMode(CORNER);
-    image(this.image, this.x*CELLSIZE, this.y*CELLSIZE);
-    pop();
-
-  }
-
-  playerCollision() {
-
-    if (player.pos.x >= this.x && player.pos.x < this.x + this.width) {
-      if (player.pos.y >= this.y && player.pos.y < this.y + this.height) {
-        return true;
-      }
+    if (this.door) {
+      image(doorImage, this.x*CELLSIZE, this.y*CELLSIZE);
     }
-    return false;
+
+    if (this.stairs) {
+      image(stairsImage, this.x*CELLSIZE, this.y*CELLSIZE);
+    }
+    pop();
   }
 }
 
@@ -257,7 +249,8 @@ class Entity {
     this.rotation = 0;
     this.knocked = false;
     this.dead = false;
-    this.onStairs = false;
+    this.onItem = false;
+    this.touching = {type: "nothing"};
     this.weapon;
   }
 
@@ -345,17 +338,20 @@ class Entity {
   checkCollisions() {
 
     let wallHere = true;
-    for (let someInteractable of this.currentRoom.interactables) {
-      if (this === player && someInteractable.playerCollision() && someInteractable.type !== "staircase") {
-        wallHere = false;
-        this.onStairs = false;
+    if (this === player) {
+      for (let someDoor of player.currentRoom.doors) {
+
+        if (floor(player.pos.x) === someDoor.x && floor(player.pos.y) === someDoor.y) {
+          wallHere = false;
+        }
       }
-      else if (this === player && someInteractable.playerCollision()) {
-        this.onStairs = true;
+      if (floor(player.pos.x) === stairs.x && floor(player.pos.y) === stairs.y) {
+        player.onStairs = true;
       }
       else {
-        this.onStairs = false;
+        player.onStairs = false;
       }
+      
     }
 
     if (wallHere) {
@@ -407,7 +403,7 @@ class Entity {
 
       setTimeout(() => {
         this.knocked = false;
-      }, weapon.knockbackTime);
+      }, weapon.knockbackTime*weapon.currentCharge/weapon.maxCharge);
     }
   }
 }
@@ -633,10 +629,12 @@ const ROOMQUANTITY = 10;
 const CELLSIZE = 100;
 const DOORSIZE = 1/5;
 
+let theGround = {dead: true};
 let directions = ["north", "south", "east", "west"];
 let rooms = [];
 let backgroundColor;
 let player;
+let stairs;
 let paused = false;
 let theseFrames = 0;
 let displayedFrames = 0;
@@ -694,6 +692,10 @@ function setup() {
   blueBackgroundImage.height = height;
   greenBackgroundImage.width = width;
   greenBackgroundImage.height = height;
+  doorImage.width = CELLSIZE;
+  doorImage.height = CELLSIZE;
+  stairsImage.width = CELLSIZE;
+  stairsImage.height = CELLSIZE;
 
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
@@ -717,6 +719,9 @@ function draw() {
     player.handleStuff();
     for (let someEntity of player.currentRoom.entities) {
       someEntity.handleStuff();
+    }
+    for (let someInteractable of player.currentRoom.interactables) {
+      someInteractable.playerCollision();
     }
   }
 
@@ -865,6 +870,9 @@ function generateRooms() {
     someRoom.spawnDoors();
     someRoom.populate();
   }
+
+  let someRoom = int(random(1, ROOMQUANTITY));
+  someRoom.createItem;
   rooms[rooms.length-1].spawnStairs();
   //rooms[0].spawnStairs();
 }
@@ -905,9 +913,6 @@ function newLevel() {
   }
 }
 
-function determineWeaponStats(object) {
-}
-
 function keyPressed() {
   if (keyCode === 32) {
     paused = !paused;
@@ -925,7 +930,6 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  //determineWeaponStats(player.weapon);
 }
 
 function playerInput() {
