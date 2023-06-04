@@ -638,18 +638,22 @@ class Container {
     this.width = 0.4;
     this.height = 0.5;
     this.dead = false;
+    this.item;
   }
 
   display() {
 
     potImage.width = this.width*CELLSIZE;
     potImage.height = this.height*CELLSIZE;
+    longswordImage.width = this.width*CELLSIZE;
+    longswordImage.height = this.height*CELLSIZE;
 
     if (! this.dead) {
       image(potImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
     }
     else {
       image(brokenPotImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
+      image(longswordImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
     }
   }
 
@@ -660,7 +664,14 @@ class Container {
       && someEntity.pos.y - someEntity.size/2 < this.y + this.height
     ) {
       this.dead = true;
+      this.createWeapon();
     }
+  }
+
+  createWeapon() {
+    let chosenType = random([LongswordStats,battleaxeStats, daggerStats]);
+    let someWeapon = new Longsword(chosenType, this, swingImage);
+    this.item = someWeapon;
   }
 }
 
@@ -688,6 +699,9 @@ let stairsImage;
 let doorImage;
 let potImage;
 let brokenPotImage;
+let longswordImage;
+let daggerImage;
+let battleaxeImage;
 
 let greyBackgroundImage;
 let greyTileImage1;
@@ -711,6 +725,9 @@ function preload() {
   doorImage = loadImage("assets/door.png");
   potImage = loadImage("assets/pot.png");
   brokenPotImage = loadImage("assets/broken_pot.png");
+  longswordImage = loadImage("assets/longsword.png");
+  daggerImage = loadImage("assets/dagger.png");
+  battleaxeImage = loadImage("assets/battleaxe.png");
 
   greyBackgroundImage = loadImage("assets/grey_background.png");
   greyTileImage1 = loadImage("assets/grey_tile1.png");
