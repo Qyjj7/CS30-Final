@@ -7,6 +7,7 @@ class Room {
     this.color = color(random(255), random(255), random(255));
     this.cells = [];
     this.containers = [];
+    this.items = [];
     this.doors = [];
     this.entities = [];
     this.cleared = false;
@@ -113,8 +114,9 @@ class Room {
     for (let i = 0; i <= potCount; i++) {
       while (this.cells.length > 0) {
         let chosenCell = random(this.cells);
-        if (! chosenCell.stairs && ! chosenCell.door) {
+        if (! chosenCell.stairs && ! chosenCell.door && ! chosenCell.pot) {
           let pot = new Container(chosenCell);
+          chosenCell.pot = true;
           this.containers.push(pot);
           break;
         }
@@ -217,6 +219,7 @@ class Cell {
     this.corner = false;
     this.door = false;
     this.stairs = false;
+    this.pot = false;
   }
 
   display() {
@@ -645,33 +648,122 @@ class Container {
 
     potImage.width = this.width*CELLSIZE;
     potImage.height = this.height*CELLSIZE;
-    longswordImage.width = this.width*CELLSIZE;
-    longswordImage.height = this.height*CELLSIZE;
 
     if (! this.dead) {
       image(potImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
     }
     else {
       image(brokenPotImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
-      image(longswordImage, (this.x+this.width/2)*CELLSIZE, (this.y+this.height/2)*CELLSIZE);
     }
   }
 
-  checkCollisions(someEntity) {
-    if (someEntity.pos.x + someEntity.size/2 > this.x
-      && someEntity.pos.x - someEntity.size/2 < this.x + this.width
-      && someEntity.pos.y + someEntity.size/2 > this.y
-      && someEntity.pos.y - someEntity.size/2 < this.y + this.height
+  checkCollisions(someWeapon) {
+    if (! this.dead
+      && someWeapon.pos.x + someWeapon.size/2 > this.x
+      && someWeapon.pos.x - someWeapon.size/2 < this.x + this.width
+      && someWeapon.pos.y + someWeapon.size/2 > this.y
+      && someWeapon.pos.y - someWeapon.size/2 < this.y + this.height
     ) {
       this.dead = true;
-      this.createWeapon();
+      this.determineDrop(someWeapon);
     }
   }
 
-  createWeapon() {
-    let chosenType = random([LongswordStats,battleaxeStats, daggerStats]);
-    let someWeapon = new Longsword(chosenType, this, swingImage);
-    this.item = someWeapon;
+  determineDrop(someWeapon) {
+    let drop = random(0, 100);
+    let name = "nothing";
+    let value;
+    let sprite;
+    let direction = someWeapon.direction;
+
+    if (drop <= 30) {
+      name = "weapon";
+      value = new Longsword(LongswordStats, this, swingImage);
+      value.damage += value.damage*level/5;
+      sprite = longswordImage;
+    }
+    else if (drop <= 60) {
+      name = "weapon";
+      value = new Longsword(battleaxeStats, this, swingImage);
+      value.damage += value.damage*level/5;
+      sprite = battleaxeImage;
+    }
+    else if (drop <= 90) {
+      name = "weapon";
+      value = new Longsword(daggerStats, this, swingImage);
+      value.damage += value.damage*level/5;
+      sprite = daggerImage;
+    }
+
+    if (name !== "nothing") {
+      
+      let newItem = new Item(this.x, this.y, value, sprite, direction, player.currentRoom.length, name);
+      player.currentRoom.items.push(newItem);
+    }
+    
+  }
+}
+
+class Item {
+  constructor(x, y, value, sprite, direction, index, name) {
+    this.name = name;
+    this.pos = createVector(x, y);
+    this.width = 0.4;
+    this.height = 0.5;
+    this.size = 0.4;
+    this.value = value;
+    this.sprite = sprite;
+    this.direction = direction;
+    this.arrayIndex = index;
+    this.vel = createVector(direction.x*0.1, direction.y*0.1);
+    this.gravityStrength = 0.0001;
+    this.friction = 0.004;
+    this.topSpeed = 0.1;
+    this.gravitating = false;
+  }
+
+  display() {
+    this.sprite.width = this.size*CELLSIZE;
+    this.sprite.height = this.size*CELLSIZE;
+    image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
+  }
+
+  handleStuff() {
+    this.gravitate();
+    this.checkCollisions();
+  }
+
+  gravitate() {
+
+    if (this.gravitating) {
+      this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
+      this.direction.normalize();
+
+      this.vel.x += this.gravityStrength*this.direction.x;
+      this.vel.y += this.gravityStrength*this.direction.y;
+      this.vel = this.vel.limit(this.topSpeed);
+      this.gravityStrength += 0.0001;
+    }
+
+    else {
+      if (this.vel.mag() >= this.friction) {
+        this.vel.setMag(this.vel.mag() - this.friction);
+      }
+      else {
+        this.vel.set(0);
+        this.gravitating = true;
+      }
+    }
+
+    this.pos.add(this.vel);
+  }
+
+  checkCollisions() {
+    if (this. gravitating && this.pos.dist(player.pos) < this.size / 2 + player.size / 2) {
+      player.currentRoom.items.splice(this.index, 1);
+      player.weapon = this.value;
+      player.weapon.owner = player;
+    } 
   }
 }
 
@@ -782,6 +874,9 @@ function draw() {
     for (let someEntity of player.currentRoom.entities) {
       someEntity.handleStuff();
     }
+    for (let someItem of player.currentRoom.items) {
+      someItem.handleStuff();
+    }
   }
 
   push();
@@ -808,6 +903,9 @@ function display() {
   }
   for (let someContainer of player.currentRoom.containers) {
     someContainer.display();
+  }
+  for (let someItem of player.currentRoom.items) {
+    someItem.display();
   }
   for (let someEnemy of player.currentRoom.entities) {
     someEnemy.display();
