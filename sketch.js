@@ -674,48 +674,65 @@ class Container {
     let name = "nothing";
     let value;
     let sprite;
-    let direction = someWeapon.direction;
+    let size = 0.4;
+    let itemDirections = [someWeapon.direction];
 
-    if (drop <= 30) {
+    if (drop <= 5) {
       name = "weapon";
       value = new Longsword(LongswordStats, this, swingImage);
       value.damage += value.damage*level/5;
       sprite = longswordImage;
     }
-    else if (drop <= 60) {
+    else if (drop <= 10) {
       name = "weapon";
       value = new Longsword(battleaxeStats, this, swingImage);
       value.damage += value.damage*level/5;
       sprite = battleaxeImage;
     }
-    else if (drop <= 90) {
+    else if (drop <= 15) {
       name = "weapon";
       value = new Longsword(daggerStats, this, swingImage);
       value.damage += value.damage*level/5;
       sprite = daggerImage;
     }
+    else if (drop <= 100) {
+      name = "coin";
+      value = 0;
+      size = 0.2;
+      sprite = projectileImage;
+
+      let coinsAmount = round(random(3, 6));
+      let startAngle = random(0, TWO_PI);
+      let intervals = TWO_PI/coinsAmount;
+      itemDirections = [];
+      for (let angle = startAngle; angle < TWO_PI + startAngle; angle += intervals) {
+        let thisDirection = createVector(cos(angle), sin(angle));
+        itemDirections.push(thisDirection);
+      }
+    }
 
     if (name !== "nothing") {
-      
-      let newItem = new Item(this.x, this.y, value, sprite, direction, player.currentRoom.length, name);
-      player.currentRoom.items.push(newItem);
+      for (let i = 0; i < itemDirections.length; i++) {
+        let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, name);
+        player.currentRoom.items.push(newItem);
+      }
     }
     
   }
 }
 
 class Item {
-  constructor(x, y, value, sprite, direction, index, name) {
+  constructor(x, y, value, sprite, direction, index, size, name) {
     this.name = name;
     this.pos = createVector(x, y);
     this.width = 0.4;
     this.height = 0.5;
-    this.size = 0.4;
+    this.size = size;
     this.value = value;
     this.sprite = sprite;
     this.direction = direction;
     this.arrayIndex = index;
-    this.vel = createVector(direction.x*0.1, direction.y*0.1);
+    this.vel = createVector(direction.x*0.05, direction.y*0.05);
     this.gravityStrength = 0.0001;
     this.friction = 0.004;
     this.topSpeed = 0.1;
@@ -761,8 +778,11 @@ class Item {
   checkCollisions() {
     if (this. gravitating && this.pos.dist(player.pos) < this.size / 2 + player.size / 2) {
       player.currentRoom.items.splice(this.index, 1);
-      player.weapon = this.value;
-      player.weapon.owner = player;
+
+      if (this.name === "weapon") {
+        player.weapon = this.value;
+        player.weapon.owner = player;
+      }
     } 
   }
 }
