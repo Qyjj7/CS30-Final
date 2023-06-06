@@ -417,7 +417,8 @@ class Entity {
 }
 
 class Longsword {
-  constructor(someWeapon, owner, sprite) {
+  constructor(someWeapon, owner, sprite, aLevel) {
+    this.level = aLevel;
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
     this.maxRange = someWeapon.size/2 + someWeapon.reach;
@@ -679,19 +680,19 @@ class Container {
 
     if (drop <= 5) {
       name = "weapon";
-      value = new Longsword(LongswordStats, this, swingImage);
+      value = new Longsword(LongswordStats, this, swingImage, level);
       value.damage += value.damage*level/5;
       sprite = longswordImage;
     }
     else if (drop <= 10) {
       name = "weapon";
-      value = new Longsword(battleaxeStats, this, swingImage);
+      value = new Longsword(battleaxeStats, this, swingImage, level);
       value.damage += value.damage*level/5;
       sprite = battleaxeImage;
     }
     else if (drop <= 15) {
       name = "weapon";
-      value = new Longsword(daggerStats, this, swingImage);
+      value = new Longsword(daggerStats, this, swingImage, level);
       value.damage += value.damage*level/5;
       sprite = daggerImage;
     }
@@ -713,7 +714,8 @@ class Container {
 
     if (name !== "nothing") {
       for (let i = 0; i < itemDirections.length; i++) {
-        let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, name);
+        let speed = random(0.04, 0.09);
+        let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, speed, name);
         player.currentRoom.items.push(newItem);
       }
     }
@@ -722,7 +724,7 @@ class Container {
 }
 
 class Item {
-  constructor(x, y, value, sprite, direction, index, size, name) {
+  constructor(x, y, value, sprite, direction, index, size, speed, name) {
     this.name = name;
     this.pos = createVector(x, y);
     this.width = 0.4;
@@ -732,9 +734,10 @@ class Item {
     this.sprite = sprite;
     this.direction = direction;
     this.arrayIndex = index;
-    this.vel = createVector(direction.x*0.05, direction.y*0.05);
+    this.vel = createVector(this.direction.x*speed, this.direction.y*speed);
     this.gravityStrength = 0.0001;
-    this.friction = 0.004;
+    this.gravityPerFrame = 0.0005;
+    this.friction = 0.005;
     this.topSpeed = 0.1;
     this.gravitating = false;
   }
@@ -759,7 +762,7 @@ class Item {
       this.vel.x += this.gravityStrength*this.direction.x;
       this.vel.y += this.gravityStrength*this.direction.y;
       this.vel = this.vel.limit(this.topSpeed);
-      this.gravityStrength += 0.0001;
+      this.gravityStrength += this.gravityPerFrame;
     }
 
     else {
@@ -776,14 +779,38 @@ class Item {
   }
 
   checkCollisions() {
-    if (this. gravitating && this.pos.dist(player.pos) < this.size / 2 + player.size / 2) {
+    if (this. gravitating && this.pos.dist(player.pos) < this.size / 2) {
       player.currentRoom.items.splice(this.index, 1);
 
       if (this.name === "weapon") {
+        this.displayingStats = true;
         player.weapon = this.value;
         player.weapon.owner = player;
       }
     } 
+  }
+}
+
+class Clickable {
+  constructor(x, y, width, height, someText) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.text = someText;
+    this.width = CELLSIZE*3;
+    this.height = CELLSIZE;
+  }
+
+  display() {
+    rectMode(CENTER);
+    fill(50);
+    rect(this.x, this.y, this.width, this.height);
+  }
+  click() {
+    if (mouseX > this.x && mouseX < this.x + this.width && mouseY > this.y && mouseY < this.y + this.height) {
+      return true;
+    }  
   }
 }
 
@@ -803,6 +830,7 @@ let paused = false;
 let theseFrames = 0;
 let displayedFrames = 0;
 let level = 0;
+let pauseButton;
 
 let meleeEnemyImage;
 let projectileImage;
@@ -873,6 +901,12 @@ function setup() {
 
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
+  let buttonWidth = CELLSIZE*2;
+  let buttonHeight = CELLSIZE/2;
+  pauseButton = new Clickable(buttonWidth/2 + 10, height - buttonHeight/2 - 10, buttonWidth, buttonHeight, "Pause");
+  pauseButton.x = pauseButton.width/2 + 10;
+  pauseButton.y = height - pauseButton.height/2 - 10;
+
   setInterval(() => {
     displayedFrames = theseFrames;
     theseFrames = 0;
@@ -904,10 +938,6 @@ function draw() {
   display();
   pop();
   displayInterface();
-
-  if (paused) {
-    displayStats();
-  }
 }
 
 function display() {
@@ -938,6 +968,8 @@ function display() {
 
 function displayInterface() {
 
+  pauseButton.display();
+
   let w = 500;
   let h = 40;
   let x = 20;
@@ -959,10 +991,6 @@ function displayInterface() {
   text("Level: " + level, 20, 150);
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
 
-  textSize(20);
-  textAlign(RIGHT);
-  text("Press Space to Pause Game", width-20, 25);
-
   if (player.onStairs && ! player.dead) {
     textSize(20);
     textAlign(CENTER);
@@ -977,36 +1005,13 @@ function displayInterface() {
   }
 }
 
-function displayStats() {
-  let l = 600;
-  let x = width/2;
-  let y = height/2;
-
-  fill(80);
-  rect(x-l/2, y-l/2, l/2, l); // stats
-
-  fill("white");
-  textSize(30);
-  textAlign(CENTER);
-  text("STATS", x-l/4, y-l/2 + l/12);
-  textAlign(LEFT);
-  text("Max HP:", x-l/2, y-l/2 + l/6);
-  text("Max Speed:", x-l/2, y-l/2 + l/4);
-  text("Weapon Size:", x-l/2, y-l/2 + l/3);
-
-}
-
 function createPlayer() {
 
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
 
-  let someWeapon = random([LongswordStats, daggerStats, battleaxeStats]);
-  let someEntity = playerStats;
-
-  player = new Entity(x, y, someEntity, rooms[0], null, meleeEnemyImage);
-  player.weapon = new Longsword(someWeapon, player, swingImage);
-  //determineWeaponStats(player.weapon);
+  player = new Entity(x, y, playerStats, rooms[0], null, meleeEnemyImage);
+  player.weapon = new Longsword(LongswordStats, player, swingImage, level);
 }
 
 function createFirstRoom() {

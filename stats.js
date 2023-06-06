@@ -8,6 +8,7 @@ let playerStats = {
 
 let LongswordStats = {
 
+  name: "longsword",
   size: 0.8,
   reach: 0.4,
   dmg: 8,
@@ -20,6 +21,7 @@ let LongswordStats = {
 
 let daggerStats = {
 
+  name: "dagger",
   size: 0.5,
   reach: 0.5,
   dmg: 5,
@@ -32,6 +34,7 @@ let daggerStats = {
 
 let battleaxeStats = {
 
+  name: "battle axe",
   size: 1.2,
   reach: 0.3,
   dmg: 12,
