@@ -678,19 +678,19 @@ class Container {
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
-    if (drop <= 5) {
+    if (drop <= 10) {
       name = "weapon";
       value = new Longsword(LongswordStats, this, swingImage, level);
       value.damage += value.damage*level/5;
       sprite = longswordImage;
     }
-    else if (drop <= 10) {
+    else if (drop <= 20) {
       name = "weapon";
       value = new Longsword(battleaxeStats, this, swingImage, level);
       value.damage += value.damage*level/5;
       sprite = battleaxeImage;
     }
-    else if (drop <= 15) {
+    else if (drop <= 30) {
       name = "weapon";
       value = new Longsword(daggerStats, this, swingImage, level);
       value.damage += value.damage*level/5;
@@ -740,6 +740,7 @@ class Item {
     this.friction = 0.005;
     this.topSpeed = 0.1;
     this.gravitating = false;
+    this.buttons = [];
   }
 
   display() {
@@ -783,9 +784,7 @@ class Item {
       player.currentRoom.items.splice(this.index, 1);
 
       if (this.name === "weapon") {
-        this.displayingStats = true;
-        player.weapon = this.value;
-        player.weapon.owner = player;
+        pickedUpWeapon = [this.value, this.sprite];
       }
       if (this.name === "coin") {
         tomatoesToCount += 1;
@@ -809,9 +808,9 @@ class Clickable {
     rect(this.x, this.y, this.width, this.height);
 
     fill("white");
-    textSize(100);
+    textSize(this.height);
     textAlign(CENTER);
-    text(this.text, this.x, this.y, this.width, this.height);
+    text(this.text, this.x, this.y);
   }
 
   click() {
@@ -826,10 +825,10 @@ const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 10;
 const CELLSIZE = 100;
-const DOORSIZE = 1/5;
 
 let directions = ["north", "south", "east", "west"];
 let rooms = [];
+let pickedUpWeapon = [];
 let backgroundColor;
 let player;
 let stairs;
@@ -1006,6 +1005,15 @@ function displayInterface() {
     text("Game Over", width/2, height/2 - CELLSIZE);
     text("Press F to Restart", width/2, height/2 + CELLSIZE);
   }
+
+  if (pickedUpWeapon.length > 0) {
+    text("Press 1 to Keep", 20, height - 50);
+    text("Press 2 to Discard", 20, height - 100);
+
+    pickedUpWeapon[1].width = 80;
+    pickedUpWeapon[1].height = 80;
+    image(pickedUpWeapon[1], pickedUpWeapon[1].width, height - pickedUpWeapon[1].height - 100);
+  }
 }
 
 function createPlayer() {
@@ -1104,9 +1112,7 @@ function countTomatoes() {
 }
 
 function keyPressed() {
-  if (keyCode === 32) {
-    paused = !paused;
-  }
+
   if (!player.dead && player.onStairs && keyCode === 70) {
     console.log("The air gets colder...");
     console.log("The light gets thinner...");
@@ -1116,6 +1122,19 @@ function keyPressed() {
     level = -1;
     newLevel();
     createPlayer();
+    tomatoes = 0;
+    tomatoesToCount = 0;
+  }
+
+  if (pickedUpWeapon.length > 0) {
+    if (keyCode === 49) {
+      player.weapon = pickedUpWeapon[0];
+      player.weapon.owner = player;
+      pickedUpWeapon = [];
+    }
+    if (keyCode === 50) {
+      pickedUpWeapon = [];
+    }
   }
 }
 
