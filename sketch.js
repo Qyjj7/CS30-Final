@@ -787,26 +787,33 @@ class Item {
         player.weapon = this.value;
         player.weapon.owner = player;
       }
+      if (this.name === "coin") {
+        tomatoesToCount += 1;
+      }
     } 
   }
 }
 
 class Clickable {
-  constructor(x, y, width, height, someText) {
+  constructor(x, y, someWidth, someHeight, someText) {
     this.x = x;
     this.y = y;
-    this.width = width;
-    this.height = height;
+    this.width = someWidth;
+    this.height = someHeight;
     this.text = someText;
-    this.width = CELLSIZE*3;
-    this.height = CELLSIZE;
   }
 
   display() {
     rectMode(CENTER);
     fill(50);
     rect(this.x, this.y, this.width, this.height);
+
+    fill("white");
+    textSize(100);
+    textAlign(CENTER);
+    text(this.text, this.x, this.y, this.width, this.height);
   }
+
   click() {
     if (mouseX > this.x && mouseX < this.x + this.width && mouseY > this.y && mouseY < this.y + this.height) {
       return true;
@@ -830,7 +837,8 @@ let paused = false;
 let theseFrames = 0;
 let displayedFrames = 0;
 let level = 0;
-let pauseButton;
+let tomatoes = 0;
+let tomatoesToCount = 0;
 
 let meleeEnemyImage;
 let projectileImage;
@@ -901,12 +909,6 @@ function setup() {
 
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
-  let buttonWidth = CELLSIZE*2;
-  let buttonHeight = CELLSIZE/2;
-  pauseButton = new Clickable(buttonWidth/2 + 10, height - buttonHeight/2 - 10, buttonWidth, buttonHeight, "Pause");
-  pauseButton.x = pauseButton.width/2 + 10;
-  pauseButton.y = height - pauseButton.height/2 - 10;
-
   setInterval(() => {
     displayedFrames = theseFrames;
     theseFrames = 0;
@@ -931,6 +933,7 @@ function draw() {
     for (let someItem of player.currentRoom.items) {
       someItem.handleStuff();
     }
+    countTomatoes();
   }
 
   push();
@@ -968,12 +971,11 @@ function display() {
 
 function displayInterface() {
 
-  pauseButton.display();
-
   let w = 500;
   let h = 40;
   let x = 20;
   let y = 15;
+  rectMode(CORNER);
   noFill();
   rect(x, y, w, h);
   fill("red");
@@ -990,6 +992,7 @@ function displayInterface() {
   text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
+  text("Tomatoes: " + tomatoes, 20, 250);
 
   if (player.onStairs && ! player.dead) {
     textSize(20);
@@ -1090,6 +1093,13 @@ function newLevel() {
 
   if (player.hp > player.maxHp) {
     player.hp = 25;
+  }
+}
+
+function countTomatoes() {
+  if (tomatoesToCount > 0 && frameCount%5 === 0) {
+    tomatoesToCount --;
+    tomatoes ++;
   }
 }
 
