@@ -155,14 +155,21 @@ class Room {
 
       let enemyCount = this.width*this.height/15;
 
+      let startAngle = random(0, TWO_PI);
+      let intervals = TWO_PI/enemyCount;
+
       for (let i = 0; i < enemyCount; i++) {
+
+        let angle = startAngle + intervals*i;
+        let destination = createVector(cos(angle), sin(angle));
+
         let chosenCell = random(this.cells);
-        this.determineEnemyStats(chosenCell);
+        this.determineEnemyStats(chosenCell, destination);
       }
     }
   }
 
-  determineEnemyStats(cell) {
+  determineEnemyStats(cell, destination) {
 
     let number = random(0, 100);
     let enemyType;
@@ -182,8 +189,6 @@ class Room {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
-      let angle = random(TWO_PI);
-      let destination = createVector(cos(angle), sin(angle));
       destination.mult(someWeapon.reach + someWeapon.size/2);
 
       let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
@@ -200,7 +205,7 @@ class Room {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
-      let destination = createVector(0, 0);
+      destination = createVector(0, 0);
 
       let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
@@ -257,8 +262,6 @@ class Entity {
     this.rotation = 0;
     this.knocked = false;
     this.dead = false;
-    this.onItem = false;
-    this.touching = {type: "nothing"};
     this.weapon;
   }
 
@@ -702,11 +705,10 @@ class Container {
       size = 0.2;
       sprite = projectileImage;
 
-      let coinsAmount = round(random(3, 6));
       let startAngle = random(0, TWO_PI);
-      let intervals = TWO_PI/coinsAmount;
+      let intervals = TWO_PI/random(3, 6);
       itemDirections = [];
-      for (let angle = startAngle; angle < TWO_PI + startAngle; angle += intervals) {
+      for (let angle = startAngle; angle <= TWO_PI + startAngle; angle += intervals) {
         let thisDirection = createVector(cos(angle), sin(angle));
         itemDirections.push(thisDirection);
       }
@@ -714,7 +716,7 @@ class Container {
 
     if (name !== "nothing") {
       for (let i = 0; i < itemDirections.length; i++) {
-        let speed = random(0.04, 0.09);
+        let speed = random(0.04, 0.08);
         let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, speed, name);
         player.currentRoom.items.push(newItem);
       }
@@ -993,6 +995,15 @@ function displayInterface() {
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
   text("Tomatoes: " + tomatoes, 20, 250);
 
+  if (pickedUpWeapon.length > 0) {
+    text("Press 1 to Keep", 20, height - 50);
+    text("Press 2 to Discard", 20, height - 100);
+
+    pickedUpWeapon[1].width = 80;
+    pickedUpWeapon[1].height = 80;
+    image(pickedUpWeapon[1], pickedUpWeapon[1].width, height - pickedUpWeapon[1].height - 100);
+  }
+
   if (player.onStairs && ! player.dead) {
     textSize(20);
     textAlign(CENTER);
@@ -1004,15 +1015,6 @@ function displayInterface() {
     textAlign(CENTER);
     text("Game Over", width/2, height/2 - CELLSIZE);
     text("Press F to Restart", width/2, height/2 + CELLSIZE);
-  }
-
-  if (pickedUpWeapon.length > 0) {
-    text("Press 1 to Keep", 20, height - 50);
-    text("Press 2 to Discard", 20, height - 100);
-
-    pickedUpWeapon[1].width = 80;
-    pickedUpWeapon[1].height = 80;
-    image(pickedUpWeapon[1], pickedUpWeapon[1].width, height - pickedUpWeapon[1].height - 100);
   }
 }
 
