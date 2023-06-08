@@ -339,6 +339,7 @@ class Entity {
             this.immunityFrames = 30;
             this.currentRoom = someRoom;
             this.currentRoom.cleared = true;
+            doorSound.play();
           }
         }
       }
@@ -395,6 +396,10 @@ class Entity {
   }
 
   getHit(weapon, charge) {
+
+    if (this !== player) {
+      enemyDamageSound.play();
+    }
 
     if (this.immunityFrames <= 0) {
 
@@ -529,6 +534,9 @@ class Longsword {
     for (let someContainer of player.currentRoom.containers) {
       someContainer.checkCollisions(this);
     }
+
+    swordSound.stop();
+    swordSound.play();
 
     this.swinging = true;
     setTimeout(() => {
@@ -795,33 +803,6 @@ class Item {
   }
 }
 
-class Clickable {
-  constructor(x, y, someWidth, someHeight, someText) {
-    this.x = x;
-    this.y = y;
-    this.width = someWidth;
-    this.height = someHeight;
-    this.text = someText;
-  }
-
-  display() {
-    rectMode(CENTER);
-    fill(50);
-    rect(this.x, this.y, this.width, this.height);
-
-    fill("white");
-    textSize(this.height);
-    textAlign(CENTER);
-    text(this.text, this.x, this.y);
-  }
-
-  click() {
-    if (mouseX > this.x && mouseX < this.x + this.width && mouseY > this.y && mouseY < this.y + this.height) {
-      return true;
-    }  
-  }
-}
-
 
 const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
@@ -840,6 +821,14 @@ let displayedFrames = 0;
 let level = 0;
 let tomatoes = 0;
 let tomatoesToCount = 0;
+
+let musicSlider;
+
+let musicLoop;
+let music;
+let swordSound;
+let doorSound;
+let enemyDamageSound;
 
 let meleeEnemyImage;
 let projectileImage;
@@ -866,6 +855,11 @@ let greenTileImage2;
 
 
 function preload() {
+
+  music = loadSound("assets/music.wav");
+  swordSound = loadSound("assets/sword_attack.wav");
+  doorSound = loadSound("assets/door_sound.mp3");
+  enemyDamageSound = loadSound("assets/enemy_damage.wav");
 
   meleeEnemyImage = loadImage("assets/melee_enemy.png");
   projectileImage = loadImage("assets/tomatobigger.png");
@@ -910,14 +904,25 @@ function setup() {
 
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
+  musicSlider = createSlider(0, 1, 0.2, 0.01);
+  musicSlider.position(width - 150, 10);
+  musicSlider.style("width", "100px");
+
   setInterval(() => {
     displayedFrames = theseFrames;
     theseFrames = 0;
   }, 1000);
 
+  music.play();
+  let musicTime = music.duration();
+  setInterval(() => {
+    music.play();
+  }, musicTime*1000);
+
   createFirstRoom();
   createPlayer();
   generateRooms();
+
 }
 
 function draw() {
@@ -942,6 +947,9 @@ function draw() {
   display();
   pop();
   displayInterface();
+
+  let val = musicSlider.value();
+  music.setVolume(val);
 }
 
 function display() {
