@@ -425,11 +425,13 @@ class Entity {
 }
 
 class Longsword {
-  constructor(someWeapon, owner, sprite) {
+  constructor(someWeapon, owner, sprite, aLevel) {
+    this.level = aLevel;
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
     this.maxRange = someWeapon.size/2 + someWeapon.reach;
     this.damage = someWeapon.dmg;
+    this.originalDamage = someWeapon.dmg;
     this.knockback = someWeapon.kb;
     this.knockbackTime = someWeapon.kbTime;
     this.maxCharge = someWeapon.maxCharge;
@@ -688,21 +690,24 @@ class Container {
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
-/*     if (drop <= 10) {
+    /*if (drop <= 10) {
       name = "weapon";
-      value = new Longsword(LongswordStats, this, swingImage, player.weapon.level);
+      value = new Longsword(LongswordStats, this, swingImage, level);
+      value.damage += value.damage*level/5;
       sprite = longswordImage;
     }
     else if (drop <= 20) {
       name = "weapon";
-      value = new Longsword(battleaxeStats, this, swingImage, player.weapon.level);
+      value = new Longsword(battleaxeStats, this, swingImage, level);
+      value.damage += value.damage*level/5;
       sprite = battleaxeImage;
     }
     else if (drop <= 30) {
       name = "weapon";
-      value = new Longsword(daggerStats, this, swingImage, player.weapon.level);
+      value = new Longsword(daggerStats, this, swingImage, level);
+      value.damage += value.damage*level/5;
       sprite = daggerImage;
-    } */
+    }*/
     if (drop <= 100) {
       name = "tomato";
       value = 0;
@@ -792,7 +797,7 @@ class Item {
       if (this.name === "weapon") {
         pickedUpWeapon = [this.value, this.sprite];
       }
-      if (this.name === "coin") {
+      if (this.name === "tomato") {
         tomatoesToCount += 1;
       }
     } 
@@ -815,10 +820,10 @@ let paused = false;
 let theseFrames = 0;
 let displayedFrames = 0;
 let level = 0;
-let playerLevel = 0;
-let nextLevelRequirement;
 let tomatoes = 0;
 let tomatoesToCount = 0;
+let playerLevel = 0;
+let nextLevelRequirements = 1;
 
 let musicSlider;
 
@@ -854,6 +859,7 @@ let greenTileImage2;
 
 function preload() {
 
+  soundFormats("mp3", "wav");
   music = loadSound("assets/music.wav");
   swordSound = loadSound("assets/sword_attack.wav");
   doorSound = loadSound("assets/door_sound.mp3");
@@ -903,19 +909,13 @@ function setup() {
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
   musicSlider = createSlider(0, 1, 0.2, 0.01);
-  musicSlider.position(width - 150, 10);
-  musicSlider.style("width", "100px");
+  musicSlider.position(width - 200, height - 50);
+  musicSlider.style("width", "150px");
 
   setInterval(() => {
     displayedFrames = theseFrames;
     theseFrames = 0;
   }, 1000);
-
-  music.play();
-  let musicTime = music.duration();
-  setInterval(() => {
-    music.play();
-  }, musicTime*1000);
 
   createFirstRoom();
   createPlayer();
@@ -948,6 +948,9 @@ function draw() {
 
   let val = musicSlider.value();
   music.setVolume(val);
+  if (! music.isPlaying()) {
+    music.play();
+  }
 }
 
 function display() {
@@ -979,32 +982,39 @@ function display() {
 function displayInterface() {
 
   let healthBarWidth = 500;
+  let h = 40;
+  let x = 20;
+  let y = 15;
   rectMode(CORNER);
   noFill();
-  rect(20, 15, healthBarWidth, 40);
+  rect(x, y, healthBarWidth, h);
   fill("red");
   healthBarWidth *= player.hp/player.maxHp;
-  rect(20, 15, healthBarWidth, 40);
+  rect(x, y, healthBarWidth, h);
 
   let levelBarWidth = 500;
   noFill();
-  rect(width - 20 - 500, 15, levelBarWidth, 40);
+  rect(width - x - levelBarWidth, y, levelBarWidth, h);
   fill("blue");
-  levelBarWidth *= tomatoes/nextLevelRequirement;
-  rect(width - 20 - 500, 15, levelBarWidth, 40);
+  levelBarWidth *= tomatoes/nextLevelRequirements;
+  rect(width - x - levelBarWidth, y, levelBarWidth, h);
 
   fill("white");
-  textSize(40);
+  textSize(h);
   textAlign(CENTER);
-  text((player.hp/player.maxHp*100).toFixed(0) + "%", 750, 50);
+  text((player.hp/player.maxHp*100).toFixed(0) + "%", 250+x, 50);
+  text("Power " + playerLevel, width - 250 - x, 50);
 
   textSize(30);
   textAlign(LEFT);
   text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
-  text("Tomatoes: " + tomatoes, 20, 250);
 
+  textAlign(CENTER);
+  text("Music", width - 125, height - 75);
+
+  textAlign(LEFT);
   if (pickedUpWeapon.length > 0) {
     text("Press 1 to Keep", 20, height - 50);
     text("Press 2 to Discard", 20, height - 100);
@@ -1034,7 +1044,7 @@ function createPlayer() {
   let y = floor(MINROOMSIZE/2) + 0.5;
 
   player = new Entity(x, y, playerStats, rooms[0], null, meleeEnemyImage);
-  player.weapon = new Longsword(LongswordStats, player, swingImage);
+  player.weapon = new Longsword(LongswordStats, player, swingImage, level);
 }
 
 function createFirstRoom() {
@@ -1121,17 +1131,13 @@ function countTomatoes() {
     tomatoesToCount --;
     tomatoes ++;
   }
-}
 
-function checkLevelUp() {
-  nextLevelRequirement = sq(playerLevel + 1);
-  if (tomatoes >= nextLevelRequirement) {
-    tomatoes = 0;
-    player.hp += 5;
-    player.weapon.damage += 1;
+  if (tomatoes >= nextLevelRequirements) {
     playerLevel ++;
+    nextLevelRequirements = sq(playerLevel + 6);
+    tomatoes = 0;
+    player.weapon.damage += player.weapon.originalDamage/4;
   }
-  nextLevelRequirement = sq(playerLevel + 1);
 }
 
 function keyPressed() {
