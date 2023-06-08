@@ -425,8 +425,7 @@ class Entity {
 }
 
 class Longsword {
-  constructor(someWeapon, owner, sprite, aLevel) {
-    this.level = aLevel;
+  constructor(someWeapon, owner, sprite) {
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
     this.maxRange = someWeapon.size/2 + someWeapon.reach;
@@ -689,26 +688,23 @@ class Container {
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
-    if (drop <= 10) {
+/*     if (drop <= 10) {
       name = "weapon";
-      value = new Longsword(LongswordStats, this, swingImage, level);
-      value.damage += value.damage*level/5;
+      value = new Longsword(LongswordStats, this, swingImage, player.weapon.level);
       sprite = longswordImage;
     }
     else if (drop <= 20) {
       name = "weapon";
-      value = new Longsword(battleaxeStats, this, swingImage, level);
-      value.damage += value.damage*level/5;
+      value = new Longsword(battleaxeStats, this, swingImage, player.weapon.level);
       sprite = battleaxeImage;
     }
     else if (drop <= 30) {
       name = "weapon";
-      value = new Longsword(daggerStats, this, swingImage, level);
-      value.damage += value.damage*level/5;
+      value = new Longsword(daggerStats, this, swingImage, player.weapon.level);
       sprite = daggerImage;
-    }
-    else if (drop <= 100) {
-      name = "coin";
+    } */
+    if (drop <= 100) {
+      name = "tomato";
       value = 0;
       size = 0.2;
       sprite = projectileImage;
@@ -819,6 +815,8 @@ let paused = false;
 let theseFrames = 0;
 let displayedFrames = 0;
 let level = 0;
+let playerLevel = 0;
+let nextLevelRequirement;
 let tomatoes = 0;
 let tomatoesToCount = 0;
 
@@ -980,21 +978,25 @@ function display() {
 
 function displayInterface() {
 
-  let w = 500;
-  let h = 40;
-  let x = 20;
-  let y = 15;
+  let healthBarWidth = 500;
   rectMode(CORNER);
   noFill();
-  rect(x, y, w, h);
+  rect(20, 15, healthBarWidth, 40);
   fill("red");
-  w *= player.hp/player.maxHp;
-  rect(x, y, w, h);
+  healthBarWidth *= player.hp/player.maxHp;
+  rect(20, 15, healthBarWidth, 40);
+
+  let levelBarWidth = 500;
+  noFill();
+  rect(width - 20 - 500, 15, levelBarWidth, 40);
+  fill("blue");
+  levelBarWidth *= tomatoes/nextLevelRequirement;
+  rect(width - 20 - 500, 15, levelBarWidth, 40);
 
   fill("white");
-  textSize(h);
+  textSize(40);
   textAlign(CENTER);
-  text((player.hp/player.maxHp*100).toFixed(0) + "%", 250+x, 50);
+  text((player.hp/player.maxHp*100).toFixed(0) + "%", 750, 50);
 
   textSize(30);
   textAlign(LEFT);
@@ -1032,7 +1034,7 @@ function createPlayer() {
   let y = floor(MINROOMSIZE/2) + 0.5;
 
   player = new Entity(x, y, playerStats, rooms[0], null, meleeEnemyImage);
-  player.weapon = new Longsword(LongswordStats, player, swingImage, level);
+  player.weapon = new Longsword(LongswordStats, player, swingImage);
 }
 
 function createFirstRoom() {
@@ -1119,6 +1121,17 @@ function countTomatoes() {
     tomatoesToCount --;
     tomatoes ++;
   }
+}
+
+function checkLevelUp() {
+  nextLevelRequirement = sq(playerLevel + 1);
+  if (tomatoes >= nextLevelRequirement) {
+    tomatoes = 0;
+    player.hp += 5;
+    player.weapon.damage += 1;
+    playerLevel ++;
+  }
+  nextLevelRequirement = sq(playerLevel + 1);
 }
 
 function keyPressed() {
