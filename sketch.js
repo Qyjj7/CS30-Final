@@ -15,6 +15,7 @@ class Room {
 
   display() {
     noFill();
+    rectMode(CORNER);
     rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
   }
 
@@ -425,13 +426,11 @@ class Entity {
 }
 
 class Longsword {
-  constructor(someWeapon, owner, sprite, aLevel) {
-    this.level = aLevel;
+  constructor(someWeapon, owner, sprite) {
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
     this.maxRange = someWeapon.size/2 + someWeapon.reach;
     this.damage = someWeapon.dmg;
-    this.originalDamage = someWeapon.dmg;
     this.knockback = someWeapon.kb;
     this.knockbackTime = someWeapon.kbTime;
     this.maxCharge = someWeapon.maxCharge;
@@ -496,7 +495,7 @@ class Longsword {
       if (mouseIsPressed && this.currentCharge < this.maxCharge) {
         this.currentCharge ++;
       }
-      else if (! mouseIsPressed && this.currentCharge > this.minCharge) {
+      if (! mouseIsPressed && this.currentCharge > this.minCharge) {
         this.attack(this.currentCharge/this.maxCharge);
         this.currentCharge = this.minCharge;
       }
@@ -690,25 +689,22 @@ class Container {
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
-    /*if (drop <= 10) {
+    if (drop <= 10) {
       name = "weapon";
-      value = new Longsword(LongswordStats, this, swingImage, level);
-      value.damage += value.damage*level/5;
+      value = new Longsword(LongswordStats, this, swingImage);
       sprite = longswordImage;
     }
     else if (drop <= 20) {
       name = "weapon";
-      value = new Longsword(battleaxeStats, this, swingImage, level);
-      value.damage += value.damage*level/5;
+      value = new Longsword(battleaxeStats, this, swingImage);
       sprite = battleaxeImage;
     }
     else if (drop <= 30) {
       name = "weapon";
-      value = new Longsword(daggerStats, this, swingImage, level);
-      value.damage += value.damage*level/5;
+      value = new Longsword(daggerStats, this, swingImage);
       sprite = daggerImage;
-    }*/
-    if (drop <= 100) {
+    }
+    else if (drop <= 100) {
       name = "tomato";
       value = 0;
       size = 0.2;
@@ -724,13 +720,30 @@ class Container {
     }
 
     if (name !== "nothing") {
+
+      if (name === "weapon") {
+        let modifierOptions = ["fast", "light", "powerful", "big"];
+        let weaponModifier = random(modifierOptions);
+        if (weaponModifier === "fast") {
+          value.maxCharge -= value.maxCharge*0.4;
+        }
+        if (weaponModifier === "light") {
+          value.maxCharge -= value.maxCharge*0.4;
+        }
+        if (weaponModifier === "powerful") {
+          value.maxCharge -= value.maxCharge*0.4;
+        }
+        if (weaponModifier === "big") {
+          value.maxCharge -= value.maxCharge*0.4;
+        }
+      }
+
       for (let i = 0; i < itemDirections.length; i++) {
         let speed = random(0.04, 0.08);
         let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, speed, name);
         player.currentRoom.items.push(newItem);
       }
-    }
-    
+    } 
   }
 }
 
@@ -796,6 +809,7 @@ class Item {
 
       if (this.name === "weapon") {
         pickedUpWeapon = [this.value, this.sprite];
+        paused = true;
       }
       if (this.name === "tomato") {
         tomatoesToCount += 1;
@@ -824,6 +838,7 @@ let tomatoes = 0;
 let tomatoesToCount = 0;
 let playerLevel = 0;
 let nextLevelRequirements = 1;
+let levelScalingMultiplier = 0.1;
 
 let musicSlider;
 
@@ -1014,14 +1029,18 @@ function displayInterface() {
   textAlign(CENTER);
   text("Music", width - 125, height - 75);
 
-  textAlign(LEFT);
+  textAlign(CENTER);
+  rectMode(CENTER);
   if (pickedUpWeapon.length > 0) {
-    text("Press 1 to Keep", 20, height - 50);
-    text("Press 2 to Discard", 20, height - 100);
+    fill(80);
+    rect(width/2, height/2, width/4, height/2);
+    fill("white");
+    text("Press 1 to Keep", width/2, height/2 + 100);
+    text("Press 2 to Discard", width/2, height/2 + 150);
 
     pickedUpWeapon[1].width = 80;
     pickedUpWeapon[1].height = 80;
-    image(pickedUpWeapon[1], pickedUpWeapon[1].width, height - pickedUpWeapon[1].height - 100);
+    image(pickedUpWeapon[1], width/2, height/2);
   }
 
   if (player.onStairs && ! player.dead) {
@@ -1136,7 +1155,6 @@ function countTomatoes() {
     playerLevel ++;
     nextLevelRequirements = sq(playerLevel + 6);
     tomatoes = 0;
-    player.weapon.damage += player.weapon.originalDamage/4;
   }
 }
 
@@ -1160,9 +1178,11 @@ function keyPressed() {
       player.weapon = pickedUpWeapon[0];
       player.weapon.owner = player;
       pickedUpWeapon = [];
+      paused = false;
     }
     if (keyCode === 50) {
       pickedUpWeapon = [];
+      paused = false;
     }
   }
 }
