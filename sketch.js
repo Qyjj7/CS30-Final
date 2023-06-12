@@ -427,6 +427,7 @@ class Entity {
 
 class Longsword {
   constructor(someWeapon, owner, sprite) {
+    this.name = "Longsword";
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
     this.maxRange = someWeapon.size/2 + someWeapon.reach;
@@ -683,29 +684,33 @@ class Container {
 
   determineDrop(someWeapon) {
     let drop = random(0, 100);
-    let name = "nothing";
+    let type = "nothing";
+    let name = "tomato";
     let value;
     let sprite;
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
     if (drop <= 10) {
-      name = "weapon";
+      type = "weapon";
+      name = "Longsword";
       value = new Longsword(LongswordStats, this, swingImage);
       sprite = longswordImage;
     }
     else if (drop <= 20) {
-      name = "weapon";
+      type = "weapon";
+      name = "Battle Axe";
       value = new Longsword(battleaxeStats, this, swingImage);
       sprite = battleaxeImage;
     }
     else if (drop <= 30) {
-      name = "weapon";
+      type = "weapon";
+      name = "Dagger";
       value = new Longsword(daggerStats, this, swingImage);
       sprite = daggerImage;
     }
     else if (drop <= 100) {
-      name = "tomato";
+      type = "tomato";
       value = 0;
       size = 0.2;
       sprite = projectileImage;
@@ -719,28 +724,29 @@ class Container {
       }
     }
 
-    if (name !== "nothing") {
+    if (type !== "nothing") {
 
-      if (name === "weapon") {
-        let modifierOptions = ["fast", "light", "powerful", "big"];
+      if (type === "weapon") {
+        let modifierOptions = ["Light", "Powerful", "Big"];
         let weaponModifier = random(modifierOptions);
-        if (weaponModifier === "fast") {
-          value.maxCharge -= value.maxCharge*0.4;
+
+        if (weaponModifier === "Light") {
+          value.minCharge *= 1.4;
+          value.currentCharge *= 1.4;
         }
-        if (weaponModifier === "light") {
-          value.maxCharge -= value.maxCharge*0.4;
+        if (weaponModifier === "Powerful") {
+          value.knockback *= 1.4;
         }
-        if (weaponModifier === "powerful") {
-          value.maxCharge -= value.maxCharge*0.4;
+        if (weaponModifier === "Big") {
+          value.size *= 1.4;
         }
-        if (weaponModifier === "big") {
-          value.maxCharge -= value.maxCharge*0.4;
-        }
+
+        value.name = weaponModifier + " " + name;
       }
 
       for (let i = 0; i < itemDirections.length; i++) {
         let speed = random(0.04, 0.08);
-        let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, speed, name);
+        let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, speed, type);
         player.currentRoom.items.push(newItem);
       }
     } 
@@ -748,8 +754,9 @@ class Container {
 }
 
 class Item {
-  constructor(x, y, value, sprite, direction, index, size, speed, name) {
+  constructor(x, y, value, sprite, direction, index, size, speed, type) {
     this.name = name;
+    this.type = type;
     this.pos = createVector(x, y);
     this.width = 0.4;
     this.height = 0.5;
@@ -807,11 +814,11 @@ class Item {
     if (this. gravitating && this.pos.dist(player.pos) < this.size / 2) {
       player.currentRoom.items.splice(this.index, 1);
 
-      if (this.name === "weapon") {
+      if (this.type === "weapon") {
         pickedUpWeapon = [this.value, this.sprite];
         paused = true;
       }
-      if (this.name === "tomato") {
+      if (this.type === "tomato") {
         tomatoesToCount += 1;
       }
     } 
@@ -1025,16 +1032,19 @@ function displayInterface() {
   text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
+  textAlign(CENTER);
+  text(player.weapon.name, width/2, 50);
 
   textAlign(CENTER);
   text("Music", width - 125, height - 75);
 
   textAlign(CENTER);
   rectMode(CENTER);
-  if (pickedUpWeapon.length > 0) {
+  if (pickedUpWeapon.length !== 0) {
     fill(80);
     rect(width/2, height/2, width/4, height/2);
     fill("white");
+    text(pickedUpWeapon[0].name, width/2, height/2 - 150);
     text("Press 1 to Keep", width/2, height/2 + 100);
     text("Press 2 to Discard", width/2, height/2 + 150);
 
