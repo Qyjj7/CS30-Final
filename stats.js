@@ -6,7 +6,7 @@ let playerStats = {
   size: 1,
 };
 
-let LongswordStats = {
+let longswordStats = {
 
   name: "longsword",
   size: 0.8,

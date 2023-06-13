@@ -186,7 +186,7 @@ class Room {
       let someEntity = structuredClone(meleeEnemyStats);
       someEntity.hp += someEntity.hp*level/5;
       let someWeapon = structuredClone(enemySwordStats);
-      someWeapon.dmg += someWeapon.dmg*level/5;
+      let damageBonus = someWeapon.dmg*level*levelScalingMultiplier;
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
@@ -194,7 +194,7 @@ class Room {
 
       let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
-      enemy.weapon = new Longsword(someWeapon, enemy, swingImage);
+      enemy.weapon = new Weapon(someWeapon, damageBonus, enemy, swingImage);
     }
 
     else if (enemyType === "ranged") {
@@ -202,7 +202,7 @@ class Room {
       let someEntity = structuredClone(rangedEnemyStats);
       someEntity.hp += someEntity.hp*level/5;
       let someWeapon = structuredClone(enemyWandStats);
-      someWeapon.dmg += someWeapon.dmg*level/5;
+      let damageBonus = someWeapon.dmg*level*levelScalingMultiplier;
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
@@ -210,7 +210,7 @@ class Room {
 
       let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
       this.entities.push(enemy);
-      enemy.weapon = new Wand(someWeapon, enemy, projectileImage);
+      enemy.weapon = new Wand(someWeapon, damageBonus, enemy, projectileImage);
     }
   }
 }
@@ -408,7 +408,7 @@ class Entity {
       this.vel.set(weapon.knockback * this.direction.x * charge, weapon.knockback * this.direction.y * charge);
 
       this.knocked = true;
-      this.hp -= weapon.damage*charge;
+      this.hp -= (weapon.damage+weapon.damageBonus)*charge;
       this.rotation = 2*PI;
       this.immunityFrames = 15;
 
@@ -425,19 +425,21 @@ class Entity {
   }
 }
 
-class Longsword {
-  constructor(someWeapon, owner, sprite) {
+class Weapon {
+  constructor(someWeapon, damageBonus, owner, sprite) {
     this.name = "Longsword";
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
     this.maxRange = someWeapon.size/2 + someWeapon.reach;
     this.damage = someWeapon.dmg;
+    this.originalDamage = someWeapon.dmg;
     this.knockback = someWeapon.kb;
     this.knockbackTime = someWeapon.kbTime;
     this.maxCharge = someWeapon.maxCharge;
     this.minCharge = someWeapon.minCharge;
     this.currentCharge = someWeapon.minCharge;
     this.slowness = someWeapon.slowness;
+    this.damageBonus = damageBonus;
     this.owner = owner;
     this.sprite = sprite;
     this.rotation = 0;
@@ -547,7 +549,7 @@ class Longsword {
 }
 
 class Wand {
-  constructor(someWeapon, owner, sprite) {
+  constructor(someWeapon, damageBonus, owner, sprite) {
     this.size = someWeapon.size;
     this.maxRange = someWeapon.reach;
     this.damage = someWeapon.dmg;
@@ -558,6 +560,7 @@ class Wand {
     this.minCharge = someWeapon.minCharge;
     this.currentCharge = someWeapon.minCharge;
     this.slowness = someWeapon.slowness;
+    this.damageBonus = damageBonus;
     this.owner = owner;
     this.sprite = sprite;
     this.rotation = 0;
@@ -694,19 +697,19 @@ class Container {
     if (drop <= 10) {
       type = "weapon";
       name = "Longsword";
-      value = new Longsword(LongswordStats, this, swingImage);
+      value = new Weapon(longswordStats, 0, this, swingImage);
       sprite = longswordImage;
     }
     else if (drop <= 20) {
       type = "weapon";
       name = "Battle Axe";
-      value = new Longsword(battleaxeStats, this, swingImage);
+      value = new Weapon(battleaxeStats, 0, this, swingImage);
       sprite = battleaxeImage;
     }
     else if (drop <= 30) {
       type = "weapon";
       name = "Dagger";
-      value = new Longsword(daggerStats, this, swingImage);
+      value = new Weapon(daggerStats, 0, this, swingImage);
       sprite = daggerImage;
     }
     else if (drop <= 100) {
@@ -755,7 +758,6 @@ class Container {
 
 class Item {
   constructor(x, y, value, sprite, direction, index, size, speed, type) {
-    this.name = name;
     this.type = type;
     this.pos = createVector(x, y);
     this.width = 0.4;
@@ -840,11 +842,11 @@ let stairs;
 let paused = false;
 let theseFrames = 0;
 let displayedFrames = 0;
-let level = 0;
+let level = 1;
 let tomatoes = 0;
 let tomatoesToCount = 0;
 let playerLevel = 0;
-let nextLevelRequirements = 1;
+let nextLevelRequirements = 0;
 let levelScalingMultiplier = 0.1;
 
 let musicSlider;
@@ -1034,6 +1036,7 @@ function displayInterface() {
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
   textAlign(CENTER);
   text(player.weapon.name, width/2, 50);
+  text(player.weapon.damage, width/2, 100);
 
   textAlign(CENTER);
   text("Music", width - 125, height - 75);
@@ -1073,7 +1076,7 @@ function createPlayer() {
   let y = floor(MINROOMSIZE/2) + 0.5;
 
   player = new Entity(x, y, playerStats, rooms[0], null, meleeEnemyImage);
-  player.weapon = new Longsword(LongswordStats, player, swingImage, level);
+  player.weapon = new Weapon(longswordStats, 0, player, swingImage);
 }
 
 function createFirstRoom() {
@@ -1163,8 +1166,9 @@ function countTomatoes() {
 
   if (tomatoes >= nextLevelRequirements) {
     playerLevel ++;
-    nextLevelRequirements = sq(playerLevel + 6);
+    nextLevelRequirements = pow(playerLevel + 1, 1.5);
     tomatoes = 0;
+    player.weapon.damage = player.weapon.originalDamage + player.weapon.originalDamage*playerLevel*levelScalingMultiplier;
   }
 }
 
@@ -1176,7 +1180,7 @@ function keyPressed() {
     newLevel();
   }
   if (player.dead && keyCode === 70) {
-    level = -1;
+    level = 0;
     newLevel();
     createPlayer();
     tomatoes = 0;
@@ -1187,6 +1191,7 @@ function keyPressed() {
     if (keyCode === 49) {
       player.weapon = pickedUpWeapon[0];
       player.weapon.owner = player;
+      player.weapon.damage = player.weapon.originalDamage + player.weapon.originalDamage*playerLevel*levelScalingMultiplier;
       pickedUpWeapon = [];
       paused = false;
     }
@@ -1195,9 +1200,6 @@ function keyPressed() {
       paused = false;
     }
   }
-}
-
-function mousePressed() {
 }
 
 function playerInput() {
