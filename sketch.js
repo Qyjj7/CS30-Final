@@ -184,7 +184,7 @@ class Room {
     if (enemyType === "melee") {
 
       let someEntity = structuredClone(meleeEnemyStats);
-      someEntity.hp += someEntity.hp*level/5;
+      someEntity.hp += someEntity.hp*levelScalingMultiplier;
       let someWeapon = structuredClone(enemySwordStats);
       let damageBonus = someWeapon.dmg*level*levelScalingMultiplier;
 
@@ -200,7 +200,7 @@ class Room {
     else if (enemyType === "ranged") {
 
       let someEntity = structuredClone(rangedEnemyStats);
-      someEntity.hp += someEntity.hp*level/5;
+      someEntity.hp += someEntity.hp*level*levelScalingMultiplier;
       let someWeapon = structuredClone(enemyWandStats);
       let damageBonus = someWeapon.dmg*level*levelScalingMultiplier;
 
@@ -279,6 +279,7 @@ class Entity {
 
     this.immunityFrames --;
     if (this === player) {
+      this.playerInput();
       this.updateMovement();
       this.checkRoom();
       this.checkCollisions();
@@ -302,15 +303,27 @@ class Entity {
       this.direction.set(0, 0);
     }
   }
+
+  playerInput() {
+
+    if (! player.dead) {
+      player.direction.x = int(keyIsDown(68)) - int(keyIsDown(65));
+      player.direction.y = int(keyIsDown(83)) - int(keyIsDown(87));
+    }
+    else {
+      player.direction.set(0, 0);
+    }
+  }
   
   updateMovement() {
 
-    if (this.direction.x === 0 && this.direction.y === 0) {
+    if (this.direction.x === 0 && this.direction.y === 0 || this.knocked) {
       if (this.vel.mag() >= this.acceleration) {
         this.vel.setMag(this.vel.mag() - this.acceleration);
       }
       else {
         this.vel.set(0);
+        this.knocked = false;
       }
     }
 
@@ -417,10 +430,6 @@ class Entity {
         this.color = "red";
         this.hp = 0;
       }
-
-      setTimeout(() => {
-        this.knocked = false;
-      }, weapon.knockbackTime*weapon.currentCharge/weapon.maxCharge);
     }
   }
 }
@@ -434,7 +443,6 @@ class Weapon {
     this.damage = someWeapon.dmg;
     this.originalDamage = someWeapon.dmg;
     this.knockback = someWeapon.kb;
-    this.knockbackTime = someWeapon.kbTime;
     this.maxCharge = someWeapon.maxCharge;
     this.minCharge = someWeapon.minCharge;
     this.currentCharge = someWeapon.minCharge;
@@ -555,7 +563,6 @@ class Wand {
     this.damage = someWeapon.dmg;
     this.vel = someWeapon.vel;
     this.knockback = someWeapon.kb;
-    this.knockbackTime = someWeapon.kbTime;
     this.maxCharge = someWeapon.maxCharge;
     this.minCharge = someWeapon.minCharge;
     this.currentCharge = someWeapon.minCharge;
@@ -813,7 +820,7 @@ class Item {
   }
 
   checkCollisions() {
-    if (this. gravitating && this.pos.dist(player.pos) < this.size / 2) {
+    if (this. gravitating && this.pos.dist(player.pos) < this.size / 2 && ! player.dead) {
       player.currentRoom.items.splice(this.index, 1);
 
       if (this.type === "weapon") {
@@ -821,9 +828,7 @@ class Item {
           pickedUpWeapon = [this.value, this.sprite];
           paused = true;
         }
-        else {
-          tomatoesToCount += 10;
-        }
+        tomatoesToCount += 10;
       }
       if (this.type === "tomato") {
         tomatoesToCount += 1;
@@ -836,7 +841,7 @@ class Item {
 const MAXROOMSIZE = 13;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 10;
-const CELLSIZE = 100;
+const CELLSIZE = 150;
 
 let directions = ["north", "south", "east", "west"];
 let rooms = [];
@@ -929,6 +934,7 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   imageMode(CENTER);
   strokeWeight(2);
+  textFont("Georia");
 
   greyBackgroundImage.width = width;
   greyBackgroundImage.height = height;
@@ -956,6 +962,8 @@ function setup() {
     autotrash = ! autotrash;
   });
 
+  music.loop();
+  
   setInterval(() => {
     displayedFrames = theseFrames;
     theseFrames = 0;
@@ -973,7 +981,6 @@ function draw() {
 
   theseFrames ++;
   if (!paused) {
-    playerInput();
     player.handleStuff();
     for (let someEntity of player.currentRoom.entities) {
       someEntity.handleStuff();
@@ -992,9 +999,7 @@ function draw() {
 
   let val = musicSlider.value();
   music.setVolume(val);
-  if (! music.isPlaying()) {
-    music.play();
-  }
+
 }
 
 function display() {
@@ -1061,9 +1066,16 @@ function displayInterface() {
   textAlign(CENTER);
   text("Music", width - 125, height - 75);
 
-  textAlign(CENTER);
-  rectMode(CENTER);
-  if (pickedUpWeapon.length !== 0) {
+  if (player.dead) {
+    textSize(50);
+    textAlign(CENTER);
+    text("Game Over", width/2, height/2 - CELLSIZE);
+    text("Press F to Restart", width/2, height/2 + CELLSIZE);
+  }
+
+  else if (pickedUpWeapon.length !== 0 ) {
+    textAlign(CENTER);
+    rectMode(CENTER);
     fill(80);
     rect(width/2, height/2, width/4, height/2);
     fill("white");
@@ -1076,17 +1088,10 @@ function displayInterface() {
     image(pickedUpWeapon[1], width/2, height/2);
   }
 
-  if (player.onStairs && ! player.dead) {
+  else if (player.onStairs) {
     textSize(20);
     textAlign(CENTER);
     text("Press F to Descend", width/2, height/2 + CELLSIZE*0.75);
-  }
-
-  if (player.dead) {
-    textSize(50);
-    textAlign(CENTER);
-    text("Game Over", width/2, height/2 - CELLSIZE);
-    text("Press F to Restart", width/2, height/2 + CELLSIZE);
   }
 }
 
@@ -1140,6 +1145,7 @@ function generateRooms() {
   }
 
   rooms[rooms.length-1].spawnStairs();
+  rooms[0].spawnStairs();
 }
 
 function myRotate(object, radians) {
@@ -1201,6 +1207,7 @@ function keyPressed() {
   }
   if (player.dead && keyCode === 70) {
     level = 0;
+    playerLevel = 1;
     newLevel();
     createPlayer();
     tomatoes = 0;
@@ -1218,19 +1225,6 @@ function keyPressed() {
     if (keyCode === 50) {
       pickedUpWeapon = [];
       paused = false;
-      tomatoesToCount += 5;
     }
   }
-}
-
-function playerInput() {
-
-  if (! player.dead && ! player.knocked) {
-    player.direction.x = int(keyIsDown(68)) - int(keyIsDown(65));
-    player.direction.y = int(keyIsDown(83)) - int(keyIsDown(87));
-  }
-  else {
-    player.direction.set(0, 0);
-  }
-
 }
