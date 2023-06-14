@@ -208,7 +208,7 @@ class Room {
       let yPos = cell.y + 0.5;
       destination = createVector(0, 0);
 
-      let enemy = new Entity(xPos, yPos, someEntity, this, destination, meleeEnemyImage);
+      let enemy = new Entity(xPos, yPos, someEntity, this, destination, rangedEnemyImage);
       this.entities.push(enemy);
       enemy.weapon = new Wand(someWeapon, damageBonus, enemy, projectileImage);
     }
@@ -817,8 +817,13 @@ class Item {
       player.currentRoom.items.splice(this.index, 1);
 
       if (this.type === "weapon") {
-        pickedUpWeapon = [this.value, this.sprite];
-        paused = true;
+        if (! autotrash) {
+          pickedUpWeapon = [this.value, this.sprite];
+          paused = true;
+        }
+        else {
+          tomatoesToCount += 10;
+        }
       }
       if (this.type === "tomato") {
         tomatoesToCount += 1;
@@ -840,6 +845,7 @@ let backgroundColor;
 let player;
 let stairs;
 let paused = false;
+let autotrash = false;
 let theseFrames = 0;
 let displayedFrames = 0;
 let level = 1;
@@ -850,6 +856,7 @@ let nextLevelRequirements = 0;
 let levelScalingMultiplier = 0.1;
 
 let musicSlider;
+let autoTrashBox;
 
 let musicLoop;
 let music;
@@ -858,6 +865,8 @@ let doorSound;
 let enemyDamageSound;
 
 let meleeEnemyImage;
+let rangedEnemyImage;
+let playerImage;
 let projectileImage;
 let swingImage;
 let stairsImage;
@@ -890,6 +899,8 @@ function preload() {
   enemyDamageSound = loadSound("assets/enemy_damage.wav");
 
   meleeEnemyImage = loadImage("assets/melee_enemy.png");
+  rangedEnemyImage = loadImage("assets/wizard.png");
+  playerImage = loadImage("assets/player_sprite.png");
   projectileImage = loadImage("assets/tomatobigger.png");
   swingImage = loadImage("assets/swing.png");
   stairsImage = loadImage("assets/stairs.png");
@@ -935,6 +946,15 @@ function setup() {
   musicSlider = createSlider(0, 1, 0.2, 0.01);
   musicSlider.position(width - 200, height - 50);
   musicSlider.style("width", "150px");
+
+  autoTrashBox = createCheckbox(" AutoTrash Weapons", false);
+  autoTrashBox.position( width - 250, height - 200);
+  autoTrashBox.style("font-size", "30px");
+  autoTrashBox.style("color", "white");
+  autoTrashBox.style("text-align", "center");
+  autoTrashBox.changed(() => {
+    autotrash = ! autotrash;
+  });
 
   setInterval(() => {
     displayedFrames = theseFrames;
@@ -1036,7 +1056,7 @@ function displayInterface() {
   text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
   textAlign(CENTER);
   text(player.weapon.name, width/2, 50);
-  text(player.weapon.damage, width/2, 100);
+  text(player.weapon.damage + " damage", width/2, 100);
 
   textAlign(CENTER);
   text("Music", width - 125, height - 75);
@@ -1075,7 +1095,7 @@ function createPlayer() {
   let x = floor(MINROOMSIZE/2) + 0.5;
   let y = floor(MINROOMSIZE/2) + 0.5;
 
-  player = new Entity(x, y, playerStats, rooms[0], null, meleeEnemyImage);
+  player = new Entity(x, y, playerStats, rooms[0], null, playerImage);
   player.weapon = new Weapon(longswordStats, 0, player, swingImage);
 }
 
@@ -1166,7 +1186,7 @@ function countTomatoes() {
 
   if (tomatoes >= nextLevelRequirements) {
     playerLevel ++;
-    nextLevelRequirements = pow(playerLevel + 1, 1.5);
+    nextLevelRequirements = pow(playerLevel + 15, 1.5);
     tomatoes = 0;
     player.weapon.damage = player.weapon.originalDamage + player.weapon.originalDamage*playerLevel*levelScalingMultiplier;
   }
@@ -1198,6 +1218,7 @@ function keyPressed() {
     if (keyCode === 50) {
       pickedUpWeapon = [];
       paused = false;
+      tomatoesToCount += 5;
     }
   }
 }
