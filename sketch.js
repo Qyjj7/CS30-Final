@@ -10,7 +10,7 @@ class Room {
     this.items = [];
     this.doors = [];
     this.entities = [];
-    this.cleared = false;
+    this.enemyCount = 0;
   }
 
   display() {
@@ -154,12 +154,12 @@ class Room {
 
     if (rooms[0] !== this) {
 
-      let enemyCount = this.width*this.height/15;
+      this.enemyCount = ceil(this.width*this.height/15);
 
       let startAngle = random(0, TWO_PI);
-      let intervals = TWO_PI/enemyCount;
+      let intervals = TWO_PI/this.enemyCount;
 
-      for (let i = 0; i < enemyCount; i++) {
+      for (let i = 0; i < this.enemyCount; i++) {
 
         let angle = startAngle + intervals*i;
         let destination = createVector(cos(angle), sin(angle));
@@ -231,7 +231,6 @@ class Cell {
   display() {
     this.sprite.width = CELLSIZE+CELLSIZE*0.01;
     this.sprite.height = CELLSIZE+CELLSIZE*0.01;
-    push();
     imageMode(CORNER);
     image(this.sprite, this.x*CELLSIZE, this.y*CELLSIZE);
 
@@ -242,7 +241,11 @@ class Cell {
     if (this.stairs) {
       image(stairsImage, this.x*CELLSIZE, this.y*CELLSIZE);
     }
-    pop();
+
+    if (this.door && this.room.enemyCount > 0) {
+      imageMode(CENTER);
+      image(lockImage, (this.x + 0.5)*CELLSIZE, (this.y + 0.5)*CELLSIZE);
+    }
   }
 }
 
@@ -271,6 +274,7 @@ class Entity {
     this.sprite.height = this.size*CELLSIZE;
     push();
     myRotate(this, this.rotation);
+    imageMode(CENTER);
     image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
     pop();
   }
@@ -333,11 +337,8 @@ class Entity {
       this.vel = this.vel.limit(this.topSpeed - this.weapon.slowness*this.weapon.currentCharge/this.weapon.maxCharge);
     }
 
-    if (! this.dead && this.rotation > 0) {
-      this.rotation -= PI/16;
-    }
-    else if (this.rotation > PI) {
-      this.rotation -= PI/16;
+    if (this.rotation > PI) {
+      this.rotation -= PI/14;
     }
 
     this.pos.add(this.vel);
@@ -352,7 +353,6 @@ class Entity {
           if (this.currentRoom !== someRoom) {
             this.immunityFrames = 30;
             this.currentRoom = someRoom;
-            this.currentRoom.cleared = true;
             doorSound.play();
           }
         }
@@ -380,7 +380,7 @@ class Entity {
       } 
     }
 
-    if (wallHere) {
+    if (wallHere || this.currentRoom.enemyCount > 0) {
 
       if (this.pos.x < this.currentRoom.x + this.size / 2) {
         this.pos.x = this.currentRoom.x + this.size / 2;
@@ -411,7 +411,7 @@ class Entity {
 
   getHit(weapon, charge) {
 
-    if (this !== player) {
+    if (! this.dead) {
       enemyDamageSound.play();
     }
 
@@ -422,12 +422,16 @@ class Entity {
 
       this.knocked = true;
       this.hp -= (weapon.damage+weapon.damageBonus)*charge;
-      this.rotation = 2*PI;
-      this.immunityFrames = 15;
+      this.immunityFrames = 10;
 
-      if (this.hp <= 0) {
+      if (this.hp <= 0 && ! this.dead) {
         this.dead = true;
-        this.color = "red";
+        this.rotation = 2*PI;
+        if (this !== player) {
+          this.currentRoom.enemyCount --;
+        }
+      }
+      if (this.hp < 0) {
         this.hp = 0;
       }
     }
@@ -444,8 +448,7 @@ class Weapon {
     this.originalDamage = someWeapon.dmg;
     this.knockback = someWeapon.kb;
     this.maxCharge = someWeapon.maxCharge;
-    this.minCharge = someWeapon.minCharge;
-    this.currentCharge = someWeapon.minCharge;
+    this.currentCharge = 0;
     this.slowness = someWeapon.slowness;
     this.damageBonus = damageBonus;
     this.owner = owner;
@@ -463,10 +466,11 @@ class Weapon {
       this.sprite.height = this.size*CELLSIZE;
       push();
       myRotate(this, this.rotation + HALF_PI);
+      imageMode(CENTER);
       image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
       pop();
     }
-    else if (this.currentCharge > this.minCharge && ! this.owner.dead) {
+    else if (this.currentCharge > 0 && ! this.owner.dead) {
       noFill();
       circle(this.pos.x*CELLSIZE, this.pos.y*CELLSIZE, this.size*CELLSIZE);
     }
@@ -506,9 +510,9 @@ class Weapon {
       if (mouseIsPressed && this.currentCharge < this.maxCharge) {
         this.currentCharge ++;
       }
-      if (! mouseIsPressed && this.currentCharge > this.minCharge) {
-        this.attack(this.currentCharge/this.maxCharge);
-        this.currentCharge = this.minCharge;
+      if (! mouseIsPressed && this.currentCharge > 0) {
+        this.attack(1 + this.currentCharge/this.maxCharge);
+        this.currentCharge = 0;
       }
     }
 
@@ -517,11 +521,11 @@ class Weapon {
         this.currentCharge ++;
       }
       else if (this.currentCharge >= this.maxCharge) {
-        this.attack(1);
-        this.currentCharge = this.minCharge;
+        this.attack(2);
+        this.currentCharge = 0;
       }
       else {
-        this.currentCharge = this.minCharge;
+        this.currentCharge = 0;
       }
     }
     
@@ -564,8 +568,7 @@ class Wand {
     this.vel = someWeapon.vel;
     this.knockback = someWeapon.kb;
     this.maxCharge = someWeapon.maxCharge;
-    this.minCharge = someWeapon.minCharge;
-    this.currentCharge = someWeapon.minCharge;
+    this.currentCharge = 0;
     this.slowness = someWeapon.slowness;
     this.damageBonus = damageBonus;
     this.owner = owner;
@@ -582,6 +585,7 @@ class Wand {
       this.sprite.height = this.size*CELLSIZE;
       push();
       myRotate(this, this.rotation);
+      imageMode(CENTER);
       image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
       pop();
     }
@@ -612,7 +616,7 @@ class Wand {
     else {
       this.updateDirection();
       this.swinging = true;
-      this.currentCharge = this.minCharge;
+      this.currentCharge = 0;
     }
   }
 
@@ -701,19 +705,19 @@ class Container {
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
-    if (drop <= 10) {
+    if (drop <= 2) {
       type = "weapon";
       name = "Longsword";
       value = new Weapon(longswordStats, 0, this, swingImage);
       sprite = longswordImage;
     }
-    else if (drop <= 20) {
+    else if (drop <= 4) {
       type = "weapon";
       name = "Battle Axe";
       value = new Weapon(battleaxeStats, 0, this, swingImage);
       sprite = battleaxeImage;
     }
-    else if (drop <= 30) {
+    else if (drop <= 6) {
       type = "weapon";
       name = "Dagger";
       value = new Weapon(daggerStats, 0, this, swingImage);
@@ -737,18 +741,20 @@ class Container {
     if (type !== "nothing") {
 
       if (type === "weapon") {
-        let modifierOptions = ["Light", "Powerful", "Big"];
+        let modifierOptions = ["Fast", "Light", "Powerful", "Big"];
         let weaponModifier = random(modifierOptions);
 
-        if (weaponModifier === "Light") {
-          value.minCharge *= 1.4;
-          value.currentCharge *= 1.4;
+        if (weaponModifier === "Fast") {
+          value.maxCharge -= value.maxCharge*0.5;
         }
+        if (weaponModifier === "Light") {
+          value.slowness -= value.slowness*0.5;
+        } 
         if (weaponModifier === "Powerful") {
-          value.knockback *= 1.4;
+          value.knockback += value.knockback*0.5;
         }
         if (weaponModifier === "Big") {
-          value.size *= 1.4;
+          value.size += value.size*0.5;
         }
 
         value.name = weaponModifier + " " + name;
@@ -820,7 +826,7 @@ class Item {
   }
 
   checkCollisions() {
-    if (this. gravitating && this.pos.dist(player.pos) < this.size / 2 && ! player.dead) {
+    if (this.gravitating && this.pos.dist(player.pos) < player.size / 2 && ! player.dead) {
       player.currentRoom.items.splice(this.index, 1);
 
       if (this.type === "weapon") {
@@ -838,7 +844,7 @@ class Item {
 }
 
 
-const MAXROOMSIZE = 13;
+const MAXROOMSIZE = 10;
 const MINROOMSIZE = 5;
 const ROOMQUANTITY = 10;
 const CELLSIZE = 150;
@@ -868,6 +874,7 @@ let music;
 let swordSound;
 let doorSound;
 let enemyDamageSound;
+let pickupSound;
 
 let meleeEnemyImage;
 let rangedEnemyImage;
@@ -878,6 +885,7 @@ let stairsImage;
 let doorImage;
 let potImage;
 let brokenPotImage;
+let lockImage;
 let longswordImage;
 let daggerImage;
 let battleaxeImage;
@@ -902,6 +910,7 @@ function preload() {
   swordSound = loadSound("assets/sword_attack.wav");
   doorSound = loadSound("assets/door_sound.mp3");
   enemyDamageSound = loadSound("assets/enemy_damage.wav");
+  pickupSound = loadSound("assets/pickup.wav");
 
   meleeEnemyImage = loadImage("assets/melee_enemy.png");
   rangedEnemyImage = loadImage("assets/wizard.png");
@@ -912,6 +921,7 @@ function preload() {
   doorImage = loadImage("assets/door.png");
   potImage = loadImage("assets/pot.png");
   brokenPotImage = loadImage("assets/broken_pot.png");
+  lockImage = loadImage("assets/lock.png");
   longswordImage = loadImage("assets/longsword.png");
   daggerImage = loadImage("assets/dagger.png");
   battleaxeImage = loadImage("assets/battleaxe.png");
@@ -932,7 +942,6 @@ function preload() {
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
-  imageMode(CENTER);
   strokeWeight(2);
   textFont("Georia");
 
@@ -946,6 +955,10 @@ function setup() {
   doorImage.height = CELLSIZE;
   stairsImage.width = CELLSIZE;
   stairsImage.height = CELLSIZE;
+  let w = lockImage.width/CELLSIZE;
+  let h = lockImage.height/CELLSIZE;
+  lockImage.width = w*CELLSIZE;
+  lockImage.height = h*CELLSIZE;
 
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
@@ -977,7 +990,8 @@ function setup() {
 
 function draw() {
 
-  image(backgroundColor, width/2, height/2);
+  imageMode(CORNER);
+  image(backgroundColor, 0, 0);
 
   theseFrames ++;
   if (!paused) {
@@ -1005,7 +1019,7 @@ function draw() {
 function display() {
 
   for (let someRoom of rooms) {
-    if (someRoom.cleared) {
+    if (someRoom.enemyCount === 0) {
       someRoom.display();
     }
   }
@@ -1048,6 +1062,11 @@ function displayInterface() {
   levelBarWidth *= tomatoes/nextLevelRequirements;
   rect(width - x - levelBarWidth, y, levelBarWidth, h);
 
+  if (player.weapon.currentCharge > 0) {
+    fill("orange");
+    rect(width/2-player.size/2*CELLSIZE, height/2 + player.size/2*CELLSIZE + 10, player.size*CELLSIZE*player.weapon.currentCharge/player.weapon.maxCharge, 5);
+  }
+
   fill("white");
   textSize(h);
   textAlign(CENTER);
@@ -1058,7 +1077,6 @@ function displayInterface() {
   textAlign(LEFT);
   text("FPS: " + displayedFrames, 20, 100);
   text("Level: " + level, 20, 150);
-  text("Charge: " + (player.weapon.currentCharge/player.weapon.maxCharge*100).toFixed(0) + "%", 20, 200);
   textAlign(CENTER);
   text(player.weapon.name, width/2, 50);
   text(player.weapon.damage + " damage", width/2, 100);
@@ -1085,6 +1103,7 @@ function displayInterface() {
 
     pickedUpWeapon[1].width = 80;
     pickedUpWeapon[1].height = 80;
+    imageMode(CENTER);
     image(pickedUpWeapon[1], width/2, height/2);
   }
 
@@ -1145,7 +1164,6 @@ function generateRooms() {
   }
 
   rooms[rooms.length-1].spawnStairs();
-  rooms[0].spawnStairs();
 }
 
 function myRotate(object, radians) {
@@ -1188,6 +1206,7 @@ function countTomatoes() {
   if (tomatoesToCount > 0 && frameCount%5 === 0) {
     tomatoesToCount --;
     tomatoes ++;
+    pickupSound.play();
   }
 
   if (tomatoes >= nextLevelRequirements) {
