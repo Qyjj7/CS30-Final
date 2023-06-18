@@ -14,6 +14,8 @@ class Room {
   }
 
   display() {
+
+    //player can see outlines of rooms to help with navigation in dungeon
     noFill();
     rectMode(CORNER);
     rect(this.x*CELLSIZE, this.y*CELLSIZE, this.width*CELLSIZE, this.height*CELLSIZE);
@@ -21,8 +23,8 @@ class Room {
 
   createNeighbor(x, y, w, h) {
 
+    //spawns new room on top of this room, translates to a potentially valid position
     let newRoom = new Room(x, y, w, h);
-
     let spawningSide = random(directions);
     
     if (spawningSide === "north") {
@@ -46,21 +48,10 @@ class Room {
 
   positionValid() {
 
-    let thisRoom = [];
-    for (let x = this.x; x < this.x+this.width; x++) {
-      for (let y = this.y; y < this.y+this.height; y++) {
-        thisRoom.push({x: x, y: y});
-      }
-    }
-
+    //checks if the new room overlaps with any other existing room
     for (let otherRoom of rooms) {
-
-      for (let i = 0; i < thisRoom.length; i++) {
-        for (let otherCell of otherRoom.cells) {
-          if (thisRoom[i].x === otherCell.x && thisRoom[i].y === otherCell.y) {
-            return false;
-          }
-        }
+      if (this.x < otherRoom.x + otherRoom.width && this.x + this.width > otherRoom.x && this.y < otherRoom.y + otherRoom.height && this.height + this.y > otherRoom.y) {
+        return false;
       }
     }
     return true;
@@ -72,9 +63,12 @@ class Room {
       if (otherRoom !== this) {
         let options = [];
 
+        // compares cells of this room to cells of every other room
         for (let someCell of this.cells) {
           for (let otherCell of otherRoom.cells) {
             
+            //cells are valid if the neither are corners and if they are adjacent to one another
+            //corners are not valid because corner doors allow travel into unintended rooms
             if (! someCell.corner && ! otherCell.corner) {
               if (someCell.x === otherCell.x - 1 && someCell.y === otherCell.y) {
                 options.push([someCell, otherCell]);
@@ -85,6 +79,7 @@ class Room {
             }
           }
         }
+        //each room is given their respective door from the randomly picked adjacent pair
         if (options.length > 0) {
           let chosenDoor = random(options);
           chosenDoor[0].door = true;
@@ -98,38 +93,37 @@ class Room {
 
   spawnStairs() {
 
-    while (this.cells.length > 0) {
+    //searches room cells and randomly picks a cell that isn't already a door to spawn the stairs 
+    let counter = 0;
+    while (this.cells.length > counter) {
       let chosenCell = random(this.cells);
       if (! chosenCell.door) {
         chosenCell.stairs = true;
         stairs = chosenCell;
         break;
       }
+      counter ++;
     }
   }
 
   spawnPots() {
 
+    //randomly picks cells to spawn new pots on
     let potCount = this.width*this.height/15;
-
     for (let i = 0; i <= potCount; i++) {
-      while (this.cells.length > 0) {
-        let chosenCell = random(this.cells);
-        if (! chosenCell.stairs && ! chosenCell.door && ! chosenCell.pot) {
-          let pot = new Container(chosenCell);
-          chosenCell.pot = true;
-          this.containers.push(pot);
-          break;
-        }
-      }
+      let chosenCell = random(this.cells);
+      let pot = new Container(chosenCell);
+      this.containers.push(pot);  
     }
   }
 
   addCells() {
 
+    //filling room with cells that can have different properties 
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         
+        //assign random sprite to give room textured look
         let sprite;
         if (backgroundColor === greyBackgroundImage) {
           sprite = random([greyTileImage1, greyTileImage2]);
@@ -141,6 +135,7 @@ class Room {
           sprite = random([greenTileImage1, greenTileImage2]);
         }
 
+        //2d arrays were not used because I find them annoying to type
         let newCell = new Cell(x + this.x, y + this.y, this, sprite);
         if (x % (this.width-1) === 0 && y % (this.height-1) === 0) {
           newCell.corner = true;
@@ -152,15 +147,15 @@ class Room {
 
   populate() {
 
+    //add enemies to the room
     if (rooms[0] !== this) {
-
       this.enemyCount = ceil(this.width*this.height/15);
-
       let startAngle = random(0, TWO_PI);
       let intervals = TWO_PI/this.enemyCount;
 
       for (let i = 0; i < this.enemyCount; i++) {
-
+        //each enemy in each room will have evenly spaced out destination points on a circle around player
+        //different destinations mean the enemies will move more independently and will not overlap too much
         let angle = startAngle + intervals*i;
         let destination = createVector(cos(angle), sin(angle));
 
@@ -172,6 +167,7 @@ class Room {
 
   determineEnemyStats(cell, destination) {
 
+    //randomly determine the enemy type
     let number = random(0, 100);
     let enemyType;
     if (number >= 0 && number < 25) {
@@ -181,6 +177,7 @@ class Room {
       enemyType = "melee";
     }
 
+    //each enemy is given hp that scales with the dungeon level and a weapon with damage that also scales with dungeon level
     if (enemyType === "melee") {
 
       let someEntity = structuredClone(meleeEnemyStats);
@@ -206,6 +203,7 @@ class Room {
 
       let xPos = cell.x + 0.5;
       let yPos = cell.y + 0.5;
+      //ranged enemies do hardly chase player, so it won't look weird if their destination is the center of the player
       destination = createVector(0, 0);
 
       let enemy = new Entity(xPos, yPos, someEntity, this, destination, rangedEnemyImage);
@@ -221,14 +219,13 @@ class Cell {
     this.y = y;
     this.room = room;
     this.sprite = sprite;
-    this.object = "blank";
     this.corner = false;
     this.door = false;
     this.stairs = false;
-    this.pot = false;
   }
 
   display() {
+
     this.sprite.width = CELLSIZE+CELLSIZE*0.01;
     this.sprite.height = CELLSIZE+CELLSIZE*0.01;
     imageMode(CORNER);
@@ -270,6 +267,7 @@ class Entity {
   }
 
   display() {
+
     this.sprite.width = this.size*CELLSIZE;
     this.sprite.height = this.size*CELLSIZE;
     push();
@@ -281,25 +279,24 @@ class Entity {
 
   handleStuff() {
 
+    //calls all necessary functions every frame to clean up draw loop
     this.immunityFrames --;
     if (this === player) {
       this.playerInput();
       this.updateMovement();
       this.checkRoom();
-      this.checkCollisions();
     }
     else {
       this.seekPlayer();
-      this.updateMovement();
-      this.checkCollisions();
-      
+      this.updateMovement();  
     }
-    if (! this.knocked) {
-      this.weapon.handleStuff();
-    }
+    this.checkCollisions();
+    this.weapon.handleStuff();
   }
 
   seekPlayer() {
+
+    //enemies seek in a straight line towards player
     this.direction.set(player.pos.x + this.destination.x - this.pos.x, player.pos.y + this.destination.x - this.pos.y);
     this.direction.normalize();
     
@@ -310,9 +307,9 @@ class Entity {
 
   playerInput() {
 
+    //my brilliant one liner to move player instead of using 4 if statements
     if (! player.dead) {
-      player.direction.x = int(keyIsDown(68)) - int(keyIsDown(65));
-      player.direction.y = int(keyIsDown(83)) - int(keyIsDown(87));
+      player.direction.set(int(keyIsDown(68)) - int(keyIsDown(65)), int(keyIsDown(83)) - int(keyIsDown(87)));
     }
     else {
       player.direction.set(0, 0);
@@ -321,6 +318,7 @@ class Entity {
   
   updateMovement() {
 
+    //gradually slows movement to a halt create a friction effect
     if (this.direction.x === 0 && this.direction.y === 0 || this.knocked) {
       if (this.vel.mag() >= this.acceleration) {
         this.vel.setMag(this.vel.mag() - this.acceleration);
@@ -332,21 +330,23 @@ class Entity {
     }
 
     else {
+      //realistic physics movement in the desired direction
       this.vel.x += this.acceleration*this.direction.x;
       this.vel.y += this.acceleration*this.direction.y;
       this.vel = this.vel.limit(this.topSpeed - this.weapon.slowness*this.weapon.currentCharge/this.weapon.maxCharge);
     }
 
     if (this.rotation > PI) {
+      //creates the flipping over effect that happens upon death
       this.rotation -= PI/14;
     }
 
     this.pos.add(this.vel);
   }
 
-
   checkRoom() {
     
+    //determines which room player is in
     for (let someRoom of rooms) {
       if (this.pos.x >= someRoom.x && this.pos.x <= someRoom.x+someRoom.width) {
         if (this.pos.y >= someRoom.y && this.pos.y <= someRoom.y+someRoom.height) {
@@ -360,18 +360,19 @@ class Entity {
     }
   }
 
-
   checkCollisions() {
 
     let wallHere = true;
     if (this === player) {
 
+      //don't do wall collision calculations if player is on a door cell
       for (let someDoor of player.currentRoom.doors) {
         if (floor(player.pos.x) === someDoor.x && floor(player.pos.y) === someDoor.y) {
           wallHere = false;
         }
       }
 
+      //checks if player is on the staircase
       if (floor(player.pos.x) === stairs.x && floor(player.pos.y) === stairs.y) {
         player.onStairs = true;
       }
@@ -380,6 +381,7 @@ class Entity {
       } 
     }
 
+    //wall collision calculations
     if (wallHere || this.currentRoom.enemyCount > 0) {
 
       if (this.pos.x < this.currentRoom.x + this.size / 2) {
@@ -411,18 +413,18 @@ class Entity {
 
   getHit(weapon, charge) {
 
+    //apply consequences of getting hit by a weapon
     if (! this.dead) {
       enemyDamageSound.play();
     }
 
     if (this.immunityFrames <= 0) {
-
+      //entity is knocked back in direction of weapon attack
       this.direction.set(weapon.direction.x, weapon.direction.y);
       this.vel.set(weapon.knockback * this.direction.x * charge, weapon.knockback * this.direction.y * charge);
-
       this.knocked = true;
       this.hp -= (weapon.damage+weapon.damageBonus)*charge;
-      this.immunityFrames = 10;
+      this.immunityFrames = 15;
 
       if (this.hp <= 0 && ! this.dead) {
         this.dead = true;
@@ -443,7 +445,6 @@ class Weapon {
     this.name = "Longsword";
     this.size = someWeapon.size;
     this.reach = someWeapon.reach;
-    this.maxRange = someWeapon.size/2 + someWeapon.reach;
     this.damage = someWeapon.dmg;
     this.originalDamage = someWeapon.dmg;
     this.knockback = someWeapon.kb;
@@ -461,6 +462,7 @@ class Weapon {
   }
 
   display() {
+
     if (this.swinging) {
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
@@ -478,28 +480,30 @@ class Weapon {
 
   handleStuff() {
 
+    //calls all necessary functions every frame to clean up draw loop
     if (! this.owner.dead) {
       this.updateDirection();
       this.windUp();
     }
-    
   }
 
   withinRange() {
-    return this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
+    //returns true if owner can hit player with an attack at its distance
+    return this.owner.pos.dist(player.pos) < this.size/2 + this.reach + player.size/2;
   }
 
   updateDirection() {
 
     if (this === player.weapon) {
+      //weapon points towards user's mouse
       this.direction.set(mouseX - width/2, mouseY - height/2);
     }
     else {
+      //points enemy weapon towards player
       this.direction.set(player.pos.x - this.owner.pos.x, player.pos.y - this.owner.pos.y);
     }
 
     this.direction.normalize();
-
     this.rotation = myGetAngle(this.owner, this.direction.x, this.direction.y);
     this.pos.set(this.owner.pos.x + this.direction.x*this.reach, this.owner.pos.y + this.direction.y*this.reach);
   }
@@ -507,9 +511,11 @@ class Weapon {
   windUp() {
 
     if (this.owner === player) {
+      //weapon charges while mouse is pressed and attacks when released
       if (mouseIsPressed && this.currentCharge < this.maxCharge) {
         this.currentCharge ++;
       }
+      //power of the attack is determined by how many frames mouse was held for
       if (! mouseIsPressed && this.currentCharge > 0) {
         this.attack(1 + this.currentCharge/this.maxCharge);
         this.currentCharge = 0;
@@ -517,7 +523,8 @@ class Weapon {
     }
 
     else {
-      if (this.withinRange() && this.currentCharge < this.maxCharge) {
+      //enemies only attack once weapon is fully charged
+      if (this.owner.pos.dist(player.pos) < this.size/2 + this.reach + player.size/2 && this.currentCharge < this.maxCharge) {
         this.currentCharge ++;
       }
       else if (this.currentCharge >= this.maxCharge) {
@@ -525,6 +532,7 @@ class Weapon {
         this.currentCharge = 0;
       }
       else {
+        //so that enemies don't unfairly store charge for later if player moves out of range
         this.currentCharge = 0;
       }
     }
@@ -535,12 +543,14 @@ class Weapon {
 
     if (this === player.weapon) {
       for (let someEntity of player.currentRoom.entities) {
+        //checks if player hit an enemy
         if (this.pos.dist(someEntity.pos) < this.size / 2 + someEntity.size / 2) {
           someEntity.getHit(this, charge);
         }
       }
     }
     else {
+      //checks if enemy hit the player
       if (this.pos.dist(player.pos) < this.size / 2 + player.size / 2) {
         player.getHit(this, charge);
       }
@@ -553,6 +563,7 @@ class Weapon {
     swordSound.stop();
     swordSound.play();
 
+    //displays the swinging image for a certain amount of time
     this.swinging = true;
     setTimeout(() => {
       this.swinging = false;
@@ -580,6 +591,7 @@ class Wand {
   }
 
   display() {
+
     if (this.swinging) {
       this.sprite.width = this.size*CELLSIZE;
       this.sprite.height = this.size*CELLSIZE;
@@ -593,6 +605,7 @@ class Wand {
 
   handleStuff() {
 
+    //calls all necessary functions every frame to clean up draw loop
     if (this.withinRange() && ! this.owner.dead && ! this.swinging) {
       this.windUp();
     }
@@ -601,15 +614,19 @@ class Wand {
   }
 
   withinRange() {
+    //returns true if owner can hit player with an attack at its distance
     return ! this.dead && this.owner.pos.dist(player.pos) < this.maxRange + player.size/2;
   }
 
   updateDirection() {
+    //sets the projectile's course towards player
     this.direction.set(player.pos.x - this.owner.pos.x, player.pos.y - this.owner.pos.y);
     this.direction.normalize();
   }
 
   windUp() {
+
+    //charges attack and fires once fully charged
     if (this.currentCharge < this.maxCharge) {
       this.currentCharge ++;
     }
@@ -622,6 +639,8 @@ class Wand {
 
   updateMovement() {
 
+    //projectile moves towards point where player was when attack was fired
+    //swinging means the projectile is flying through the air
     if (this.swinging) {
       this.pos.x += this.vel*this.direction.x;
       this.pos.y += this.vel*this.direction.y;
@@ -636,6 +655,7 @@ class Wand {
 
     let collision = false;
 
+    //wall collisions
     if (this.pos.x <= player.currentRoom.x + this.size / 2) {
       collision = true;
     }
@@ -649,9 +669,10 @@ class Wand {
       collision = true;
     }
 
+    //player collisions
     if (this.swinging && this.pos.dist(player.pos) < this.size/2 + player.size/2) {
       collision = true;
-      player.getHit(this, 1);
+      player.getHit(this, 2);
     }
 
     if (collision) {
@@ -685,6 +706,8 @@ class Container {
   }
 
   checkCollisions(someWeapon) {
+
+    //checks if weapon swing hitbox overlaps with this hitbox
     if (! this.dead
       && someWeapon.pos.x + someWeapon.size/2 > this.x
       && someWeapon.pos.x - someWeapon.size/2 < this.x + this.width
@@ -697,6 +720,8 @@ class Container {
   }
 
   determineDrop(someWeapon) {
+
+    //determines what item is dropped when container is broken
     let drop = random(0, 100);
     let type = "nothing";
     let name = "tomato";
@@ -729,6 +754,7 @@ class Container {
       size = 0.2;
       sprite = projectileImage;
 
+      //tomatoes scatter evenly spaced out
       let startAngle = random(0, TWO_PI);
       let intervals = TWO_PI/random(3, 6);
       itemDirections = [];
@@ -741,6 +767,7 @@ class Container {
     if (type !== "nothing") {
 
       if (type === "weapon") {
+        //giving weapon bonus in one random stat
         let modifierOptions = ["Fast", "Light", "Powerful", "Big"];
         let weaponModifier = random(modifierOptions);
 
@@ -756,11 +783,12 @@ class Container {
         if (weaponModifier === "Big") {
           value.size += value.size*0.5;
         }
-
+        //adding descriptive prefix to the weapon's display name
         value.name = weaponModifier + " " + name;
       }
 
       for (let i = 0; i < itemDirections.length; i++) {
+        //spawns the item
         let speed = random(0.04, 0.08);
         let newItem = new Item(this.x, this.y, value, sprite, itemDirections[i], player.currentRoom.length, size, speed, type);
         player.currentRoom.items.push(newItem);
@@ -790,12 +818,15 @@ class Item {
   }
 
   display() {
+
     this.sprite.width = this.size*CELLSIZE;
     this.sprite.height = this.size*CELLSIZE;
     image(this.sprite, this.pos.x*CELLSIZE, this.pos.y*CELLSIZE);
   }
 
   handleStuff() {
+
+    //calls all necessary functions every frame to clean up draw loop
     this.gravitate();
     this.checkCollisions();
   }
@@ -803,16 +834,19 @@ class Item {
   gravitate() {
 
     if (this.gravitating) {
+      //item accelerates towards player
       this.direction.set(player.pos.x - this.pos.x, player.pos.y - this.pos.y);
       this.direction.normalize();
 
       this.vel.x += this.gravityStrength*this.direction.x;
       this.vel.y += this.gravityStrength*this.direction.y;
       this.vel = this.vel.limit(this.topSpeed);
+      //gravity needs to increase constantly so that the item won't fly past the player due to slow turning from a low acceleration
       this.gravityStrength += this.gravityPerFrame;
     }
 
     else {
+      //before gravitating towards player, item must come to a complete stop from its initial velocity
       if (this.vel.mag() >= this.friction) {
         this.vel.setMag(this.vel.mag() - this.friction);
       }
@@ -826,11 +860,14 @@ class Item {
   }
 
   checkCollisions() {
+
+    //checks if item has reached player
     if (this.gravitating && this.pos.dist(player.pos) < player.size / 2 && ! player.dead) {
       player.currentRoom.items.splice(this.index, 1);
 
       if (this.type === "weapon") {
         if (! autotrash) {
+          //initiates the pop up menu
           pickedUpWeapon = [this.value, this.sprite];
           paused = true;
         }
@@ -842,6 +879,85 @@ class Item {
     } 
   }
 }
+
+//some constant stats that work better organized this way
+let playerStats = {
+
+  acceleration: 0.008,
+  topSpeed: 0.07,
+  hp: 25,
+  size: 1,
+};
+
+let longswordStats = {
+
+  name: "longsword",
+  size: 0.8,
+  reach: 0.4,
+  dmg: 4,
+  kb: 0.03,
+  maxCharge: 30,
+  slowness: 0.025,
+};
+
+let daggerStats = {
+
+  name: "dagger",
+  size: 0.5,
+  reach: 0.45,
+  dmg: 2.5,
+  kb: 0.015,
+  maxCharge: 10,
+  slowness: 0.001,
+};
+
+let battleaxeStats = {
+
+  name: "battle axe",
+  size: 1.2,
+  reach: 0.3,
+  dmg: 6,
+  kb: 0.05,
+  maxCharge: 80,
+  slowness: 0.05
+};
+
+let meleeEnemyStats = {
+
+  acceleration: 0.004,
+  topSpeed: 0.05,
+  hp: 10,
+  size: 1.4,
+};
+
+let enemySwordStats = {
+
+  size: 1,
+  reach: 0.3,
+  dmg: 1,
+  kb: 0.06,
+  maxCharge: 20,
+  slowness: 0,
+};
+
+let rangedEnemyStats = {
+
+  acceleration: 0.004,
+  topSpeed: 0.05,
+  hp: 5,
+  size: 0.8,
+};
+
+let enemyWandStats = {
+
+  size: 0.6,
+  reach: 5,
+  dmg: 1.5,
+  vel: 0.08,
+  kb: 0.1,
+  maxCharge: 100,
+  slowness: 0,
+};
 
 
 const MAXROOMSIZE = 10;
@@ -857,7 +973,7 @@ let player;
 let stairs;
 let paused = false;
 let autotrash = false;
-let theseFrames = 0;
+let framesCounted = 0;
 let displayedFrames = 0;
 let level = 1;
 let tomatoes = 0;
@@ -905,7 +1021,6 @@ let greenTileImage2;
 
 function preload() {
 
-  soundFormats("mp3", "wav");
   music = loadSound("assets/music.wav");
   swordSound = loadSound("assets/sword_attack.wav");
   doorSound = loadSound("assets/door_sound.mp3");
@@ -945,6 +1060,7 @@ function setup() {
   strokeWeight(2);
   textFont("Georia");
 
+  //adjusting some sprite sizes
   greyBackgroundImage.width = width;
   greyBackgroundImage.height = height;
   blueBackgroundImage.width = width;
@@ -962,6 +1078,7 @@ function setup() {
 
   backgroundColor = random([greyBackgroundImage, blueBackgroundImage, greenBackgroundImage]);
 
+  //implementing and styling some DOM elements
   musicSlider = createSlider(0, 1, 0.2, 0.01);
   musicSlider.position(width - 200, height - 50);
   musicSlider.style("width", "150px");
@@ -977,11 +1094,13 @@ function setup() {
 
   music.loop();
   
+  //updates fps every second
   setInterval(() => {
-    displayedFrames = theseFrames;
-    theseFrames = 0;
+    displayedFrames = framesCounted;
+    framesCounted = 0;
   }, 1000);
 
+  //sets up dungeon
   createFirstRoom();
   createPlayer();
   generateRooms();
@@ -990,10 +1109,9 @@ function setup() {
 
 function draw() {
 
-  imageMode(CORNER);
-  image(backgroundColor, 0, 0);
+  framesCounted ++;
 
-  theseFrames ++;
+  //actual game stuff
   if (!paused) {
     player.handleStuff();
     for (let someEntity of player.currentRoom.entities) {
@@ -1005,25 +1123,29 @@ function draw() {
     countTomatoes();
   }
 
+  //displaying image for background
+  imageMode(CORNER);
+  image(backgroundColor, 0, 0);
   push();
+  //displaying game stuff relative to player position
   translate(-player.pos.x*CELLSIZE + width/2, -player.pos.y*CELLSIZE + height/2);
   display();
   pop();
+  //displaying user interface stuff
   displayInterface();
 
   let val = musicSlider.value();
   music.setVolume(val);
-
 }
 
 function display() {
 
+  //displaying game stuff
   for (let someRoom of rooms) {
     if (someRoom.enemyCount === 0) {
       someRoom.display();
     }
   }
-
   for (let someCell of player.currentRoom.cells) {
     someCell.display();
   }
@@ -1037,12 +1159,13 @@ function display() {
     someEnemy.display();
     someEnemy.weapon.display();
   }
-
   player.display();
   player.weapon.display();
 }
 
 function displayInterface() {
+
+  //displaying user interface
 
   let healthBarWidth = 500;
   let h = 40;
@@ -1050,17 +1173,17 @@ function displayInterface() {
   let y = 15;
   rectMode(CORNER);
   noFill();
-  rect(x, y, healthBarWidth, h);
+  rect(x, y, healthBarWidth, 40);
   fill("red");
   healthBarWidth *= player.hp/player.maxHp;
-  rect(x, y, healthBarWidth, h);
+  rect(x, y, healthBarWidth, 40);
 
   let levelBarWidth = 500;
   noFill();
-  rect(width - x - levelBarWidth, y, levelBarWidth, h);
+  rect(width - x - levelBarWidth, y, levelBarWidth, 40);
   fill("blue");
   levelBarWidth *= tomatoes/nextLevelRequirements;
-  rect(width - x - levelBarWidth, y, levelBarWidth, h);
+  rect(width - x - levelBarWidth, y, levelBarWidth, 40);
 
   if (player.weapon.currentCharge > 0) {
     fill("orange");
@@ -1079,11 +1202,12 @@ function displayInterface() {
   text("Level: " + level, 20, 150);
   textAlign(CENTER);
   text(player.weapon.name, width/2, 50);
-  text(player.weapon.damage + " damage", width/2, 100);
+  text(player.weapon.damage.toFixed(0) + " damage", width/2, 100);
 
   textAlign(CENTER);
   text("Music", width - 125, height - 75);
 
+  //pop ups can display one at a time and are ordered by priority
   if (player.dead) {
     textSize(50);
     textAlign(CENTER);
@@ -1125,31 +1249,25 @@ function createPlayer() {
 
 function createFirstRoom() {
 
-  let someRoom = new Room(0, 0, MINROOMSIZE, MINROOMSIZE);
-  rooms.push(someRoom);
-  someRoom.addCells();
-  someRoom.cleared = true;
+  let firstRoom = new Room(0, 0, MINROOMSIZE, MINROOMSIZE);
+  rooms.push(firstRoom);
+  firstRoom.addCells();
+  firstRoom.cleared = true;
 }
 
 function generateRooms() {
 
   while (rooms.length < ROOMQUANTITY) {
-    let validRooms = [...rooms];
+    //continues trying to spawn rooms until room quantity is met 
+    let roomsToCheck = randomizeArray(rooms);
     let h = floor(random(MINROOMSIZE, MAXROOMSIZE));
     let w = floor(random(MINROOMSIZE, MAXROOMSIZE));
-  
-    while (validRooms.length > 0) {
-      let someRoom = random(validRooms);
-      let x = someRoom.x;
-      let y = someRoom.y;
-      let newRoom = someRoom.createNeighbor(x, y, w, h);
-  
-      if (! newRoom.positionValid()) {
-        for (let i = 0; i < validRooms.length; i++) {
-          validRooms.splice(i, 1);
-        }
-      }
-      else {
+
+    //tries to spawn the new room adjacent to every existing room in a random order, until valid position is found
+    for (let i = 0; i < roomsToCheck.length; i++) {
+      let someRoom = roomsToCheck[i];
+      let newRoom = someRoom.createNeighbor(someRoom.x, someRoom.y, w, h);
+      if (newRoom.positionValid()) {
         rooms.push(newRoom);
         newRoom.addCells();
         break;
@@ -1157,29 +1275,47 @@ function generateRooms() {
     }
   }
 
+  //adds other necessary parts to the rooms
   for (let someRoom of rooms) {
     someRoom.spawnDoors();
     someRoom.populate();
     someRoom.spawnPots();
   }
-
   rooms[rooms.length-1].spawnStairs();
 }
 
 function myRotate(object, radians) {
+  //rotates around object by amount radians rather than around the origin
   translate(object.pos.x*CELLSIZE, object.pos.y*CELLSIZE);
   rotate(radians);
   translate(-object.pos.x*CELLSIZE, -object.pos.y*CELLSIZE);
 }
 
 function myGetAngle(object, x, y) {
+  //gets the angle between object and the coordinate point rather than the origin
   translate(object.pos.x*CELLSIZE, object.pos.y*CELLSIZE);
   let angle = atan2(y, x);
   translate(-object.pos.x*CELLSIZE, -object.pos.y*CELLSIZE);
   return angle;
 }
 
+function randomizeArray(array) {
+
+  //returns a new array that has same elements as old array, but in random order
+  //for each element in array, swap its index value with another random element
+  let randomizedArray = [...array];
+  for (let i = 0; i < array.length; i++) {
+    let swapIndex = floor(random(0, array.length));
+    let temp = randomizedArray[i];
+    randomizedArray[i] = randomizedArray[swapIndex];
+    randomizedArray[swapIndex] = temp;
+  }
+  return randomizedArray;
+}
+
 function newLevel() {
+
+  //creates a new level by resetting necessary variables and generating new dungeon
   level ++;
   rooms.splice(0);
   
@@ -1203,14 +1339,18 @@ function newLevel() {
 }
 
 function countTomatoes() {
+
+  //rythmically adds tomatoes collected to total tomatoes owned
   if (tomatoesToCount > 0 && frameCount%5 === 0) {
     tomatoesToCount --;
     tomatoes ++;
     pickupSound.play();
   }
 
+  //levels up player
   if (tomatoes >= nextLevelRequirements) {
     playerLevel ++;
+    //next level takes more tomatoes to reach as it is calculated by a power function
     nextLevelRequirements = pow(playerLevel + 15, 1.5);
     tomatoes = 0;
     player.weapon.damage = player.weapon.originalDamage + player.weapon.originalDamage*playerLevel*levelScalingMultiplier;
@@ -1219,11 +1359,14 @@ function countTomatoes() {
 
 function keyPressed() {
 
-  if (!player.dead && player.onStairs && keyCode === 70) {
+  //press f to descend down staircase
+  if (! player.dead && player.onStairs && keyCode === 70) {
     console.log("The air gets colder...");
     console.log("The light gets thinner...");
     newLevel();
   }
+
+  //press f to reset game
   if (player.dead && keyCode === 70) {
     level = 0;
     playerLevel = 1;
@@ -1234,6 +1377,7 @@ function keyPressed() {
   }
 
   if (pickedUpWeapon.length > 0) {
+    //press 1 to pick up new weapon
     if (keyCode === 49) {
       player.weapon = pickedUpWeapon[0];
       player.weapon.owner = player;
@@ -1241,6 +1385,7 @@ function keyPressed() {
       pickedUpWeapon = [];
       paused = false;
     }
+    //press 2 to discard new weapon
     if (keyCode === 50) {
       pickedUpWeapon = [];
       paused = false;
