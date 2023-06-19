@@ -1,3 +1,7 @@
+//Riley Morrissey
+//CS-30 Capstone Coding Project
+//June 20, 2023
+
 class Room {
   constructor(x, y, w, h) {
     this.width = w;
