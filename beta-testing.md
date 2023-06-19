@@ -1,7 +1,13 @@
 # Beta-Testing
 
 ## Non-programmer's advice:
-- margaret thatcher
+- characters look weird
+- very fun
+- add abilities to make each weapon feel more unique
+- the weapon should be displayed in the character's hands
+- make it easier to regain health
+- game is too difficult
+- make weapon drops more common
 
 ## Programmer's advice:
 - add more knockback, player is defenceless when surrounded by enemies in a corner

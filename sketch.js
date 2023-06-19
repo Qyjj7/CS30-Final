@@ -1,6 +1,7 @@
 //Riley Morrissey
 //CS-30 Capstone Coding Project
 //June 20, 2023
+//Character sprites by Wesley Thiessen
 
 class Room {
   constructor(x, y, w, h) {
@@ -455,6 +456,7 @@ class Weapon {
     this.maxCharge = someWeapon.maxCharge;
     this.currentCharge = 0;
     this.slowness = someWeapon.slowness;
+    this.minimumCharge = someWeapon.minimumCharge;
     this.damageBonus = damageBonus;
     this.owner = owner;
     this.sprite = sprite;
@@ -521,7 +523,7 @@ class Weapon {
       }
       //power of the attack is determined by how many frames mouse was held for
       if (! mouseIsPressed && this.currentCharge > 0) {
-        this.attack(1 + this.currentCharge/this.maxCharge);
+        this.attack(0.5 + this.currentCharge/this.maxCharge);
         this.currentCharge = 0;
       }
     }
@@ -532,7 +534,7 @@ class Weapon {
         this.currentCharge ++;
       }
       else if (this.currentCharge >= this.maxCharge) {
-        this.attack(2);
+        this.attack(this.minimumCharge);
         this.currentCharge = 0;
       }
       else {
@@ -734,19 +736,19 @@ class Container {
     let size = 0.4;
     let itemDirections = [someWeapon.direction];
 
-    if (drop <= 2) {
+    if (drop <= 3) {
       type = "weapon";
       name = "Longsword";
       value = new Weapon(longswordStats, 0, this, swingImage);
       sprite = longswordImage;
     }
-    else if (drop <= 4) {
+    else if (drop <= 6) {
       type = "weapon";
       name = "Battle Axe";
       value = new Weapon(battleaxeStats, 0, this, swingImage);
       sprite = battleaxeImage;
     }
-    else if (drop <= 6) {
+    else if (drop <= 9) {
       type = "weapon";
       name = "Dagger";
       value = new Weapon(daggerStats, 0, this, swingImage);
@@ -889,7 +891,7 @@ let playerStats = {
 
   acceleration: 0.008,
   topSpeed: 0.07,
-  hp: 25,
+  hp: 50,
   size: 1,
 };
 
@@ -899,9 +901,10 @@ let longswordStats = {
   size: 0.8,
   reach: 0.4,
   dmg: 4,
-  kb: 0.03,
+  kb: 0.04,
   maxCharge: 30,
   slowness: 0.025,
+  minimumCharge: 1,
 };
 
 let daggerStats = {
@@ -910,9 +913,10 @@ let daggerStats = {
   size: 0.5,
   reach: 0.45,
   dmg: 2.5,
-  kb: 0.015,
+  kb: 0.02,
   maxCharge: 10,
   slowness: 0.001,
+  minimumCharge: 1.5,
 };
 
 let battleaxeStats = {
@@ -921,9 +925,10 @@ let battleaxeStats = {
   size: 1.2,
   reach: 0.3,
   dmg: 6,
-  kb: 0.05,
+  kb: 0.08,
   maxCharge: 80,
-  slowness: 0.05
+  slowness: 0.05,
+  minimumCharge: 0.5,
 };
 
 let meleeEnemyStats = {
@@ -942,6 +947,7 @@ let enemySwordStats = {
   kb: 0.06,
   maxCharge: 20,
   slowness: 0,
+  minimumCharge: 2,
 };
 
 let rangedEnemyStats = {
@@ -1125,6 +1131,10 @@ function draw() {
       someItem.handleStuff();
     }
     countTomatoes();
+
+    if (player.hp > player.maxHp) {
+      player.hp = player.maxHp;
+    }
   }
 
   //displaying image for background
@@ -1248,7 +1258,7 @@ function createPlayer() {
   let y = floor(MINROOMSIZE/2) + 0.5;
 
   player = new Entity(x, y, playerStats, rooms[0], null, playerImage);
-  player.weapon = new Weapon(longswordStats, 0, player, swingImage);
+  player.weapon = new Weapon(battleaxeStats, 0, player, swingImage);
 }
 
 function createFirstRoom() {
@@ -1335,11 +1345,7 @@ function newLevel() {
   generateRooms();
 
   player.pos.set(floor(MINROOMSIZE/2) + 0.5, floor(MINROOMSIZE/2) + 0.5);
-  player.hp += 10;
-
-  if (player.hp > player.maxHp) {
-    player.hp = 25;
-  }
+  player.hp += player.maxHp/2;
 }
 
 function countTomatoes() {
@@ -1355,8 +1361,9 @@ function countTomatoes() {
   if (tomatoes >= nextLevelRequirements) {
     playerLevel ++;
     //next level takes more tomatoes to reach as it is calculated by a power function
-    nextLevelRequirements = pow(playerLevel + 15, 1.5);
+    nextLevelRequirements = pow(playerLevel + 12, 1.8);
     tomatoes = 0;
+    player.hp += player.maxHp/2;
     player.weapon.damage = player.weapon.originalDamage + player.weapon.originalDamage*playerLevel*levelScalingMultiplier;
   }
 }
